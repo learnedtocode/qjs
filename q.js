@@ -82,8 +82,21 @@ window.qjsSettings = {
 	var qjs_main = window.qjs_main = window.qjs_main || {};
 	qjs_main.defaultSettings = defaultSettings;
 
+	// House keeping variables
 	var boardName = window.location.pathname.match(/\/([^\/]+)\//)[1];
 	var opPostId = window.location.href.match(/\/(\d+)\.html/)[1];
+	var qposts = [];
+	var currq = -1;
+	var youposts = [];
+	var curryou = -1;
+	var qnavposts = [];
+	var younavposts = [];
+	var ctx;
+	var borderSz;
+	var minheight;
+	var ratehistory = [];
+	var floodEnabled = getSetting('floodEnabled');
+	var postCount = 0;
 
 	function getSetting(name) {
 		var s = window.qjsSettings;
@@ -543,643 +556,628 @@ ${getSetting('extraStyles')}
 	$(document).on('new_post', updatePostCount);
 	updatePostCount();
 
-	(function(qjs_main, $, undefined) {
-		// House keeping variables
-		var qposts = [];
-		var currq = -1;
-		var youposts = [];
-		var curryou = -1;
-		var qnavposts = [];
-		var younavposts = [];
-		var ctx;
-		var	borderSz;
-		var minheight;
-		var ratehistory = [];
-		var floodEnabled = getSetting('floodEnabled');
+	// On scroll stop. SO #9144560
+	(function ($) {
+		var on = $.fn.on, timer;
+		$.fn.on = function () {
+			var args = Array.apply(null, arguments);
+			var last = args[args.length - 1];
 
-		// On scroll stop. SO #9144560
-		(function ($) {
-			var on = $.fn.on, timer;
-			$.fn.on = function () {
-				var args = Array.apply(null, arguments);
-				var last = args[args.length - 1];
+			if (isNaN(last) || (last === 1 && args.pop())) return on.apply(this, args);
 
-				if (isNaN(last) || (last === 1 && args.pop())) return on.apply(this, args);
+			var delay = args.pop();
+			var fn = args.pop();
 
-				var delay = args.pop();
-				var fn = args.pop();
-
-				args.push(function () {
-					var self = this, params = arguments;
-					clearTimeout(timer);
-					timer = setTimeout(function () {
-						fn.apply(self, params);
-					}, delay);
-				});
-
-				return on.apply(this, args);
-			};
-		}(this.jQuery || this.Zepto));
-
-		// Case insensitive contains selector for finding yous. SO #8746882
-		$.expr[":"].icontains = jQuery.expr.createPseudo(function (arg) {
-			return function (elem) {
-				return jQuery(elem).text().toUpperCase().indexOf(arg.toUpperCase()) >= 0;
-			};
-		});
-
-		// Get non-child text. SO #3442394
-		function immediateText(el) {
-			return el.contents().not(el.children()).text();
-		}
-
-		// Scroll to element
-		function myScrollTo(el) {
-			$('html, body').animate({
-				scrollTop: $(el).offset().top - $('div.boardlist').height()
-			}, getSetting('scrolltime'));
-		}
-
-		// Scroll to next Q
-		qjs_main.nextq = function() {
-			if(qposts.length > 0) {
-				if(currq < qposts.length-1) {
-					currq++;
-				}
-				myScrollTo($(qposts).get(currq));
-			}
-		};
-
-		// Scroll to last Q
-		qjs_main.lastq = function() {
-			if(qposts.length > 0) {
-				currq = qposts.length - 1;
-				myScrollTo($(qposts).get(currq));
-			}
-		};
-
-		// Scroll to previous Q
-		qjs_main.prevq = function() {
-			if(qposts.length > 0) {
-				if(currq > 0) {
-					currq--;
-				}
-				myScrollTo($(qposts).get(currq));
-			}
-		};
-
-		// Scroll to first Q
-		qjs_main.firstq = function() {
-			if(qposts.length > 0) {
-				currq = 0;
-				myScrollTo($(qposts).get(currq));
-			}
-		};
-
-		// Scroll to next (You)
-		qjs_main.nextyou = function() {
-			if(youposts.length > 0) {
-				if(curryou < youposts.length-1) {
-					curryou++;
-				}
-				myScrollTo($(youposts).get(curryou));
-			}
-		};
-
-		// Scroll to last (You)
-		qjs_main.lastyou = function() {
-			if(youposts.length > 0) {
-				curryou = youposts.length - 1;
-				myScrollTo($(youposts).get(curryou));
-			}
-		};
-
-		// Scroll to previous (You)
-		qjs_main.prevyou = function() {
-			if(youposts.length > 0) {
-				if(curryou > 0) {
-					curryou--;
-				}
-				myScrollTo($(youposts).get(curryou));
-			}
-		};
-
-		// Scroll to first (You)
-		qjs_main.firstyou = function() {
-			if(youposts.length > 0) {
-				curryou = 0;
-				myScrollTo($(youposts).get(curryou));
-			}
-		};
-
-		// Inserts Q navigation links
-		function qnav() {
-			$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.firstq();"><i class="fa fa-step-backward"></i></a> <a href="javascript:qjs_main.prevq();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">Q</span> <span class="qcount">(?:?)</span> <a href="javascript:qjs_main.nextq();"><i class="fa fa-forward"></i></a> <a href="javascript:qjs_main.lastq();"><i class="fa fa-step-forward"></i></a> ]</span>');
-		}
-
-		// Inserts (You) navigation links
-		function younav() {
-			$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.firstyou();"><i class="fa fa-step-backward"></i></a> <a href="javascript:qjs_main.prevyou();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">(You)</span> <span class="youcount">(?:?)</span> </span><a href="javascript:qjs_main.nextyou();"><i class="fa fa-forward"></i></a> <a href="javascript:qjs_main.lastyou();"><i class="fa fa-step-forward"></i></a> ]</span>');
-		}
-
-		// Inserts feature toggle links
-		function togglenav() {
-			$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.toggleFlood();">Post Fading <span class="toggleFloodState">' + (floodEnabled ? 'Off' : 'On') + '</span></a> ]</span>')
-		}
-
-		// Inserts post rate count/chart
-		function postratenav() {
-			var height = $('div.boardlist').height() - 1;
-			$('div.boardlist').append('<span>[ Post Rate: <span class="postRate">0</span> posts/min <canvas class="postRateChart"></canvas>]</span>')
-			$('.postRate').css('color', $('div.boardlist a').css('color'));
-			var charts = $('.postRateChart');
-			$(charts).each(function() {
-				$(this).css('width', '75px');
-				$(this).css('height', height);
-				$(this).css('vertical-align', 'middle');
-				//$(this).css('border', '1px solid');
-				//$(this).css('border-color', $('div.boardlist').css('color'));
-				var gctx = $(this).get(0).getContext('2d');
-				gctx.canvas.height = 20;
-				gctx.canvas.width = 100;
+			args.push(function () {
+				var self = this, params = arguments;
+				clearTimeout(timer);
+				timer = setTimeout(function () {
+					fn.apply(self, params);
+				}, delay);
 			});
-		}
 
-		// Inserts side navigation (bird's eye)
-		function sidenav() {
-			$('body').append('<canvas id="sidenav"></canvas>');
-			var nav = $('#sidenav');
-			$(nav).css('position', 'fixed');
-			$(nav).css('top', $('div.boardlist').height());
-			$(nav).css('right', 0);
-			$(nav).css('width', getSetting('sidenavWidth'));
-			$(nav).css('height', $(window).height() - $('div.boardlist').height());
-			$(nav).css('background-color', getSetting('scrollbackcolor'));
-			$('body').css('margin-right', getSetting('sidenavWidth'));
-			ctx = $('#sidenav').get(0).getContext('2d');
-			//ctx.canvas.height = $(document).height() - $('div.boardlist').height();
-			ctx.canvas.height = 2048;
-			ctx.canvas.width = getSetting('sidenavWidth');
-			borderSz = 1;
-		}
-
-		// Update nav when scrolling stops
-		$(window).on('scroll', function(e) {
-			updateNavCounts();
-			updateNavGraphics();
-		}, getSetting('updateDelay'));
-
-		// Update nav when resize stops
-		$(window).on('resize', function(e) {
-			updateNav();
-		}, getSetting('updateDelay'));
-
-		// Toggle post flooding
-		qjs_main.toggleFlood = function() {
-			if (floodEnabled) {
-				floodEnabled = false;
-				$('.toggleFloodState').text('On');
-				if(getSetting('floodBehavior') === 'fade') {
-					$('span.poster_id').each(function () {
-						$(this).closest('div.post').css('opacity', 1);
-						$(this).closest('div.post').off('mouseenter mouseleave');
-					});
-				} else if(getSetting('floodBehavior') === 'hide') {
-					$(this).closest('div.post').show();
-				}
-			} else {
-				floodEnabled = true;
-				$('.toggleFloodState').text('Off');
-				runq();
-			}
+			return on.apply(this, args);
 		};
+	}(window.jQuery));
 
-		// Helper to run snippets in the right order
-		function runq() {
-			$allPosts = $('div.post:not(.post-hover):not(.hidden)');
+	// Case insensitive contains selector for finding yous. SO #8746882
+	$.expr[":"].icontains = jQuery.expr.createPseudo(function (arg) {
+		return function (elem) {
+			return jQuery(elem).text().toUpperCase().indexOf(arg.toUpperCase()) >= 0;
+		};
+	});
 
-			processPastebins(); // Added later (newsbaker)
-			setQPosts();
-			removeInvalidYous();
-			setYouPosts();
-			setFloodPosts();
-			updateNav();
+	// Get non-child text. SO #3442394
+	function immediateText(el) {
+		return el.contents().not(el.children()).text();
+	}
 
-			// Added here later (newsbaker)
-			addPostControls();
-			removeBlacklistedImages();
-			fixAutoUpdates();
+	// Scroll to element
+	function myScrollTo(el) {
+		$('html, body').animate({
+			scrollTop: $(el).offset().top - $('div.boardlist').height()
+		}, getSetting('scrolltime'));
+	}
+
+	// Scroll to next Q
+	qjs_main.nextq = function() {
+		if(qposts.length > 0) {
+			if(currq < qposts.length-1) {
+				currq++;
+			}
+			myScrollTo($(qposts).get(currq));
 		}
+	};
 
-		// Try to look up pastebin author(s)
-		function processPastebins() {
-			$allPosts.filter(':not(.qjs-processed-pastebin)').each(function() {
-				if (/pastebin\.com/.test(this.textContent)) {
-					$('p.body-line', this).each(function() {
-						if (this.textContent.length < 45) {
-							// Pastebin URL length is 29, allow a few more chars for "dough:" etc
-							var pastebinId = (this.textContent || '')
-								.match(/pastebin\.com\/([a-zA-Z0-9]{8})\b/);
-							pastebinId = pastebinId ? pastebinId[1] : null;
-							if (pastebinId) {
-								var bodyLine = this;
-								function pbDone(data) {
-									var msg;
-									if (data.error) {
-										msg = 'ERROR: ' + data.error;
-									} else if (data.anonymous) {
-										msg = 'anonymous';
-									} else {
-										msg = (
-											'<a href="https://pastebin.com/u/' + data.username
-											+ '" target="_blank" rel="noopener noreferer">'
-											+ '/u/' + data.username
-											+ '</a>'
-										);
-									}
-									$(bodyLine).append(
-										'<span class="qjs-pastebin">'
-										+ ':pastebin ' + msg
-										+ '</span>'
+	// Scroll to last Q
+	qjs_main.lastq = function() {
+		if(qposts.length > 0) {
+			currq = qposts.length - 1;
+			myScrollTo($(qposts).get(currq));
+		}
+	};
+
+	// Scroll to previous Q
+	qjs_main.prevq = function() {
+		if(qposts.length > 0) {
+			if(currq > 0) {
+				currq--;
+			}
+			myScrollTo($(qposts).get(currq));
+		}
+	};
+
+	// Scroll to first Q
+	qjs_main.firstq = function() {
+		if(qposts.length > 0) {
+			currq = 0;
+			myScrollTo($(qposts).get(currq));
+		}
+	};
+
+	// Scroll to next (You)
+	qjs_main.nextyou = function() {
+		if(youposts.length > 0) {
+			if(curryou < youposts.length-1) {
+				curryou++;
+			}
+			myScrollTo($(youposts).get(curryou));
+		}
+	};
+
+	// Scroll to last (You)
+	qjs_main.lastyou = function() {
+		if(youposts.length > 0) {
+			curryou = youposts.length - 1;
+			myScrollTo($(youposts).get(curryou));
+		}
+	};
+
+	// Scroll to previous (You)
+	qjs_main.prevyou = function() {
+		if(youposts.length > 0) {
+			if(curryou > 0) {
+				curryou--;
+			}
+			myScrollTo($(youposts).get(curryou));
+		}
+	};
+
+	// Scroll to first (You)
+	qjs_main.firstyou = function() {
+		if(youposts.length > 0) {
+			curryou = 0;
+			myScrollTo($(youposts).get(curryou));
+		}
+	};
+
+	// Inserts Q navigation links
+	function qnav() {
+		$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.firstq();"><i class="fa fa-step-backward"></i></a> <a href="javascript:qjs_main.prevq();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">Q</span> <span class="qcount">(?:?)</span> <a href="javascript:qjs_main.nextq();"><i class="fa fa-forward"></i></a> <a href="javascript:qjs_main.lastq();"><i class="fa fa-step-forward"></i></a> ]</span>');
+	}
+
+	// Inserts (You) navigation links
+	function younav() {
+		$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.firstyou();"><i class="fa fa-step-backward"></i></a> <a href="javascript:qjs_main.prevyou();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">(You)</span> <span class="youcount">(?:?)</span> </span><a href="javascript:qjs_main.nextyou();"><i class="fa fa-forward"></i></a> <a href="javascript:qjs_main.lastyou();"><i class="fa fa-step-forward"></i></a> ]</span>');
+	}
+
+	// Inserts feature toggle links
+	function togglenav() {
+		$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.toggleFlood();">Post Fading <span class="toggleFloodState">' + (floodEnabled ? 'Off' : 'On') + '</span></a> ]</span>')
+	}
+
+	// Inserts post rate count/chart
+	function postratenav() {
+		var height = $('div.boardlist').height() - 1;
+		$('div.boardlist').append('<span>[ Post Rate: <span class="postRate">0</span> posts/min <canvas class="postRateChart"></canvas>]</span>')
+		$('.postRate').css('color', $('div.boardlist a').css('color'));
+		var charts = $('.postRateChart');
+		$(charts).each(function() {
+			$(this).css('width', '75px');
+			$(this).css('height', height);
+			$(this).css('vertical-align', 'middle');
+			//$(this).css('border', '1px solid');
+			//$(this).css('border-color', $('div.boardlist').css('color'));
+			var gctx = $(this).get(0).getContext('2d');
+			gctx.canvas.height = 20;
+			gctx.canvas.width = 100;
+		});
+	}
+
+	// Inserts side navigation (bird's eye)
+	function sidenav() {
+		$('body').append('<canvas id="sidenav"></canvas>');
+		var nav = $('#sidenav');
+		$(nav).css('position', 'fixed');
+		$(nav).css('top', $('div.boardlist').height());
+		$(nav).css('right', 0);
+		$(nav).css('width', getSetting('sidenavWidth'));
+		$(nav).css('height', $(window).height() - $('div.boardlist').height());
+		$(nav).css('background-color', getSetting('scrollbackcolor'));
+		$('body').css('margin-right', getSetting('sidenavWidth'));
+		ctx = $('#sidenav').get(0).getContext('2d');
+		//ctx.canvas.height = $(document).height() - $('div.boardlist').height();
+		ctx.canvas.height = 2048;
+		ctx.canvas.width = getSetting('sidenavWidth');
+		borderSz = 1;
+	}
+
+	// Update nav when scrolling stops
+	$(window).on('scroll', function(e) {
+		updateNavCounts();
+		updateNavGraphics();
+	}, getSetting('updateDelay'));
+
+	// Update nav when resize stops
+	$(window).on('resize', function(e) {
+		updateNav();
+	}, getSetting('updateDelay'));
+
+	// Toggle post flooding
+	qjs_main.toggleFlood = function() {
+		if (floodEnabled) {
+			floodEnabled = false;
+			$('.toggleFloodState').text('On');
+			if(getSetting('floodBehavior') === 'fade') {
+				$('span.poster_id').each(function () {
+					$(this).closest('div.post').css('opacity', 1);
+					$(this).closest('div.post').off('mouseenter mouseleave');
+				});
+			} else if(getSetting('floodBehavior') === 'hide') {
+				$(this).closest('div.post').show();
+			}
+		} else {
+			floodEnabled = true;
+			$('.toggleFloodState').text('Off');
+			runq();
+		}
+	};
+
+	// Helper to run snippets in the right order
+	function runq() {
+		$allPosts = $('div.post:not(.post-hover):not(.hidden)');
+
+		processPastebins(); // Added later (newsbaker)
+		setQPosts();
+		removeInvalidYous();
+		setYouPosts();
+		setFloodPosts();
+		updateNav();
+
+		// Added here later (newsbaker)
+		addPostControls();
+		removeBlacklistedImages();
+		fixAutoUpdates();
+	}
+
+	// Try to look up pastebin author(s)
+	function processPastebins() {
+		$allPosts.filter(':not(.qjs-processed-pastebin)').each(function() {
+			if (/pastebin\.com/.test(this.textContent)) {
+				$('p.body-line', this).each(function() {
+					if (this.textContent.length < 45) {
+						// Pastebin URL length is 29, allow a few more chars for "dough:" etc
+						var pastebinId = (this.textContent || '')
+							.match(/pastebin\.com\/([a-zA-Z0-9]{8})\b/);
+						pastebinId = pastebinId ? pastebinId[1] : null;
+						if (pastebinId) {
+							var bodyLine = this;
+							function pbDone(data) {
+								var msg;
+								if (data.error) {
+									msg = 'ERROR: ' + data.error;
+								} else if (data.anonymous) {
+									msg = 'anonymous';
+								} else {
+									msg = (
+										'<a href="https://pastebin.com/u/' + data.username
+										+ '" target="_blank" rel="noopener noreferer">'
+										+ '/u/' + data.username
+										+ '</a>'
 									);
 								}
-								$.ajax({
-									url: 'https://wearethene.ws/api/dough?v=3&paste_id=' + pastebinId,
-									success: function(data) {
-										pbDone(data);
-									},
-									error: function(xhr, textStatus, errorThrown) {
-										pbDone({
-											error: errorThrown || textStatus || 'unknown',
-										});
-									},
-									dataType: 'json',
-								});
+								$(bodyLine).append(
+									'<span class="qjs-pastebin">'
+									+ ':pastebin ' + msg
+									+ '</span>'
+								);
 							}
-						}
-					});
-				}
-				this.classList.add('qjs-processed-pastebin');
-			});
-		}
-
-		// Set which posts are Q posts
-		function setQPosts() {
-			$allPosts.filter(':not(.qjs-processed-q)').each(function() {
-				var $this = $(this);
-				if ($this.find('span.trip:contains("!!Hs1Jq13jV6")').length) {
-					qposts.push(this);
-					$this.css('background-color', getSetting('qcolor'));
-					if (getSetting('qflair') !== '') {
-						$this
-							.find('p.intro > label > span.trip')
-							.first()
-							.prepend(getSetting('qflair') + ' ');
-					}
-				}
-				this.classList.add('qjs-processed-q');
-			});
-		}
-
-		// Remove invalid (you)'s
-		function removeInvalidYous() {
-			$allPosts.filter(':not(.qjs-processed-invalidyou)').each(function() {
-				if (/\(You\)/i.test(this.textContent)) {
-					$(this).find('.body :not(small)').contents().filter(function() {
-						return this.nodeType === 3;
-					}).each(function() {
-						var text = this.textContent.replace(/\(You\)/ig, '(.You.)');
-						if (text !== this.textContent) {
-							this.textContent = text;
-						}
-					});
-				}
-				this.classList.add('qjs-processed-invalidyou');
-			});
-		}
-
-		// Set which posts are (you) posts
-		function setYouPosts() {
-			$allPosts.filter(':not(.qjs-processed-you)').each(function() {
-				var $this = $(this);
-				if ($this.find('span.own_post, small:icontains("(You)")').length) {
-					youposts.push(this);
-					var youcolor = getSetting('youcolor');
-					if (/!important/.test(youcolor)) {
-						// Workaround for boards that have badly written styles
-						// https://bugs.jquery.com/ticket/2066
-						$this.css('cssText', 'background-color: ' + youcolor);
-					} else {
-						$this.css('background-color', youcolor);
-					}
-				}
-				this.classList.add('qjs-processed-you');
-			});
-		}
-
-		// Set flood posts
-		function setFloodPosts() {
-			if (floodEnabled) {
-				var stats = {};
-				var firstId = null;
-				//console.log("==[ Name Fags ]=================================================");
-				var posts = $('div.post:not(.post-hover)').not('.you');
-				$(posts).each(function () {
-					var id = $(this).find('p > span.poster_id').first().text();
-					if(firstId != null) {
-						if (!(id in stats)) {
-							stats[id] = {count: 0, namefag: false, floodcount: 0};
-						}
-						stats[id].count++;
-						if(!stats[id].namefag) {
-							var name = immediateText($(this).find('p > label span.name').first());
-							var trip = $(this).find('p > label > span.trip').first().text();
-							stats[id].namefag = !getSetting('fadenametripregex').test(name+'-'+trip);
-							//if(stats[id].namefag) {
-							//	console.log(id + '=' + stats[id].namefag + ', ' + name + ', ' + trip);
-							//}
-						}
-						if(stats[id].namefag) {
-							if(getSetting('fadenametripfloodvalue') < 0) {
-								stats[id].floodcount = getSetting('floodThreshold') + stats[id].count;
-							} else {
-								stats[id].floodcount = getSetting('fadenametripfloodvalue');
-							}
-						} else {
-							stats[id].floodcount = stats[id].count;
-						}
-					}
-					if (firstId == null) {
-						firstId = id;
-					}
-				});
-				$.each(stats, function (key, value) {
-					if (key !== firstId) {
-						var ids = $('span.poster_id:contains("' + key + '")');
-						if (value.floodcount > getSetting('floodThreshold') || value.namefag) {
-							if(getSetting('strikeThroughNameFags') && value.namefag) {
-								$(ids).each(function() {
-									$(this).closest('div.post').find('p > label span.name').first().css('text-decoration','line-through');
-								});
-							}
-							if (getSetting('floodBehavior') === 'fade') {
-								var intensity = value.floodcount;
-								if (intensity > getSetting('floodVanish')) {
-									intensity = getSetting('floodVanish');
-								}
-								intensity = ((getSetting('floodVanish') - getSetting('floodThreshold')) - (intensity - getSetting('floodThreshold'))) / (getSetting('floodVanish') - getSetting('floodThreshold'));
-								if (intensity < 0.1) {
-									intensity = 0.1;
-								}
-								$(ids).each(function () {
-									$(this).closest('div.post').css('opacity', intensity);
-									$(this).closest('div.post').hover(function () {
-										$(this).animate({opacity: 1.0}, getSetting('updateDelay'));
-									}, function () {
-										$(this).animate({opacity: intensity}, getSetting('updateDelay'));
+							$.ajax({
+								url: 'https://wearethene.ws/api/dough?v=3&paste_id=' + pastebinId,
+								success: function(data) {
+									pbDone(data);
+								},
+								error: function(xhr, textStatus, errorThrown) {
+									pbDone({
+										error: errorThrown || textStatus || 'unknown',
 									});
-								});
-							} else if (getSetting('floodBehavior') === 'hide') {
-								if (value.count >= getSetting('floodVanish')) {
-									$(ids).each(function () {
-										$(this).closest('div.post').hide();
-									});
-								}
-							}
-						} else {
-							$(ids).each(function () {
-								$(this).closest('div.post').css('opacity', 1.0);
+								},
+								dataType: 'json',
 							});
 						}
 					}
 				});
 			}
-			return $.Deferred().resolve();
-		}
+			this.classList.add('qjs-processed-pastebin');
+		});
+	}
 
-		// Update navigation
-		function updateNav() {
-			updateNavCounts();
-			updateNavGraphics();
-			updateNavPostRate();
-		}
-
-		// Update navigation counts
-		function updateNavCounts() {
-			var fontSize = -1;
-			var lineHeight;
-
-			if(currq > qposts.length) { currq = qposts.length; }
-			if(curryou > youposts.length) { curryou = youposts.length; }
-
-			for(i=0; i<qposts.length; i++) {
-				var el = $(qposts).get(i);
-				if(fontSize == -1) {
-					fontSize = $(el).css('font-size');
-					lineHeight = Math.floor(parseInt(fontSize.replace('px', '')) * 1.5);
-				}
-				if(($(el).offset().top + $(el).height() - 2.25*lineHeight) > $(window).scrollTop()) {
-					currq = i;
-					break;
+	// Set which posts are Q posts
+	function setQPosts() {
+		$allPosts.filter(':not(.qjs-processed-q)').each(function() {
+			var $this = $(this);
+			if ($this.find('span.trip:contains("!!Hs1Jq13jV6")').length) {
+				qposts.push(this);
+				$this.css('background-color', getSetting('qcolor'));
+				if (getSetting('qflair') !== '') {
+					$this
+						.find('p.intro > label > span.trip')
+						.first()
+						.prepend(getSetting('qflair') + ' ');
 				}
 			}
+			this.classList.add('qjs-processed-q');
+		});
+	}
 
-			for(i=0; i<youposts.length; i++) {
-				var el = $(youposts).get(i);
-				if(fontSize == -1) {
-					fontSize = $(el).css('font-size');
-					lineHeight = Math.floor(parseInt(fontSize.replace('px', '')) * 1.5);
-				}
-				if(($(el).offset().top + $(el).height() - 2.25*lineHeight) > $(window).scrollTop()) {
-					curryou = i;
-					break;
-				}
-			}
-
-			// TODO: check for duplicates and remove from counts
-			$('.qcount').text("(" + (currq+1) + ":" + qposts.length + ")");
-			$('.youcount').text("(" + (curryou+1) + ":" + youposts.length + ")");
-		}
-
-		// Update navigation graphics
-		function updateNavGraphics() {
-			var sidenav = $('#sidenav');
-			if(sidenav.length) {
-				$(sidenav).css('height', $(window).height() - $('div.boardlist').height());
-				minheight = ctx.canvas.height / ($(window).height() - $('div.boardlist').height()); // 1px
-				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-				// Draw nav q posts
-				qnavposts = [];
-				ctx.fillStyle = getSetting('qcolor');
-				for (i = 0; i < qposts.length; i++) {
-					// TODO: check if we have already added post, don't draw it again
-					var el = $(qposts).get(i);
-					var height = $(el).height() / $(document).height() * ctx.canvas.height;
-					if(height < minheight) height = minheight;
-					qnavposts[i] = {
-						x : borderSz,
-						y : $(el).offset().top / $(document).height() * ctx.canvas.height,
-						width : ctx.canvas.width - borderSz*2,
-						height : height
-					};
-					ctx.fillRect(qnavposts[i].x, qnavposts[i].y, qnavposts[i].width, qnavposts[i].height);
-				}
-
-				// Draw nav you posts
-				younavposts = [];
-				ctx.fillStyle = getSetting('youscrollcolor') || getSetting('youcolor');
-				for (i = 0; i < youposts.length; i++) {
-					// TODO: check if we have already added post, don't add it again
-					var el = $(youposts).get(i);
-					var height = $(el).height() / $(document).height() * ctx.canvas.height;
-					if(height < minheight) height = minheight;
-					younavposts[i] = {
-						x : borderSz,
-						y : $(el).offset().top / $(document).height() * ctx.canvas.height,
-						width : ctx.canvas.width - borderSz*2,
-						height : height
-					};
-					ctx.fillRect(younavposts[i].x, younavposts[i].y, younavposts[i].width, younavposts[i].height);
-				}
-
-				// Update nav window
-				ctx.fillStyle = getSetting('scrollcolor');
-				var heightScale = ctx.canvas.height / $(document).height(),
-					scrollStart = $(window).scrollTop() * heightScale,
-					scrollHeight = $(window).height() * heightScale,
-					scrollMinHeight = getSetting('scrollminheight') * ctx.canvas.height / $(window).height();
-				if (scrollHeight < scrollMinHeight) {
-					scrollStart -= (scrollMinHeight - scrollHeight) / 4;
-					scrollHeight += (scrollMinHeight - scrollHeight) * 3 / 4;
-					if (scrollStart < 0) {
-						scrollStart = 0;
-					} else if (scrollStart + scrollHeight > ctx.canvas.height) {
-						scrollStart = ctx.canvas.height - scrollHeight;
+	// Remove invalid (you)'s
+	function removeInvalidYous() {
+		$allPosts.filter(':not(.qjs-processed-invalidyou)').each(function() {
+			if (/\(You\)/i.test(this.textContent)) {
+				$(this).find('.body :not(small)').contents().filter(function() {
+					return this.nodeType === 3;
+				}).each(function() {
+					var text = this.textContent.replace(/\(You\)/ig, '(.You.)');
+					if (text !== this.textContent) {
+						this.textContent = text;
 					}
-				}
-				ctx.fillRect(
-					ctx.canvas.width / 4,
-					scrollStart,
-					ctx.canvas.width / 2,
-					scrollHeight
-				);
-
-				// Add red marker at bottom of >750 posts
-				if($('#thread_stats_posts').text() > 750) {
-					var barHeight = (4 * ctx.canvas.height) / ($(window).height() - $('div.boardlist').height());
-					ctx.fillStyle = '#f66';
-					ctx.fillRect(
-						0,
-						ctx.canvas.height - barHeight,
-						ctx.canvas.width,
-						barHeight
-					);
-				}
-			}
-		}
-
-		// Updates post rate count/chart
-		function updateNavPostRate() {
-			var posts = $('div.post').not('.post-hover');
-			var startPost = posts.length - (getSetting('rateHistoryLen') + getSetting('rateAvgLen')) + 1;
-			if(startPost < 1) startPost = 1;
-			var start = $($($(posts).get(0)).find('.intro time').get(0)).attr('unixtime'); //$('div.post:first .intro time').attr('unixtime');
-			ratehistory = [];
-			timehistory = [];
-			for(var i=startPost; i<posts.length; i++) {
-				// TODO: check if we have already added post, don't add it again
-				var step = $($($(posts).get(i)).find('.intro time').get(0)).attr('unixtime'); //$($('div.post .intro time').get(i)).attr('unixtime');
-				timehistory[timehistory.length] = step;
-				if(timehistory.length - getSetting('rateAvgLen') - 1 >= 0) {
-					var avgend = timehistory[timehistory.length - 1];
-					var avgstart = timehistory[timehistory.length - getSetting('rateAvgLen') - 1];
-					ratehistory[ratehistory.length] = getSetting('rateAvgLen') / ((avgend - avgstart) / 60);
-				} else {
-					ratehistory[ratehistory.length] = 0;
-				}
-			}
-			//console.log(ratehistory);
-
-			if (ratehistory.length) {
-				$('.postRate').text(ratehistory[ratehistory.length-1].toFixed(1));
-			}
-
-			if(ratehistory.length > getSetting('rateAvgLen')) {
-				var maxRate = Math.max.apply(null, ratehistory);
-				var minRate = Math.min.apply(null, ratehistory);
-				//console.log("Max: " + maxRate);
-				//console.log("Min: " + minRate);
-				if(minRate > (maxRate - 0.5)) {
-					minRate = maxRate - 0.5;
-					maxRate = maxRate + 0.5;
-				}
-				if(minRate < 0) {
-					minRate = 0;
-				}
-				var maxTime = timehistory[timehistory.length-1];
-				var minTime = timehistory[getSetting('rateAvgLen')];
-				$('.postRateChart').each(function() {
-					var gctx = $(this).get(0).getContext('2d');
-					gctx.clearRect(0, 0, gctx.canvas.width, gctx.canvas.height);
-					gctx.strokeStyle = $('div.boardlist a').css('color');
-					gctx.beginPath();
-					var x = 0;
-					var y = gctx.canvas.height - (ratehistory[getSetting('rateAvgLen')] - minRate)/(maxRate - minRate) * gctx.canvas.height;
-					gctx.moveTo(x, y);
-					for(var i=getSetting('rateAvgLen')+1; i<ratehistory.length; i++) {
-						x = (timehistory[i] - minTime)/(maxTime - minTime) * gctx.canvas.width;
-						y = gctx.canvas.height - (ratehistory[i] - minRate)/(maxRate - minRate) * gctx.canvas.height;
-						gctx.lineTo(x, y);
-					}
-					gctx.stroke();
-					gctx.closePath();
 				});
 			}
-		}
+			this.classList.add('qjs-processed-invalidyou');
+		});
+	}
 
-
-		qjs_main.Q = function() {
-			qnav();
-			younav();
-			togglenav();
-			postratenav();
-			sidenav();
-			runq();
-
-			// Scroll back to target post after qjs controls added
-			setTimeout(function() {
-				var hashBackup = document.location.hash;
-				if (hashBackup) {
-					document.location.hash = '';
-					document.location.hash = hashBackup;
-					$(window).scrollTop($(window).scrollTop() - 60);
+	// Set which posts are (you) posts
+	function setYouPosts() {
+		$allPosts.filter(':not(.qjs-processed-you)').each(function() {
+			var $this = $(this);
+			if ($this.find('span.own_post, small:icontains("(You)")').length) {
+				youposts.push(this);
+				var youcolor = getSetting('youcolor');
+				if (/!important/.test(youcolor)) {
+					// Workaround for boards that have badly written styles
+					// https://bugs.jquery.com/ticket/2066
+					$this.css('cssText', 'background-color: ' + youcolor);
+				} else {
+					$this.css('background-color', youcolor);
 				}
-			}, 0);
+			}
+			this.classList.add('qjs-processed-you');
+		});
+	}
 
-			// Select the node that will be observed for mutations
-			var targetNode = $('div.thread')[0];
-
-			// Options for the observer (which mutations to observe)
-			var config = { childList: true };
-
-			// Callback function to execute when mutations are observed
-			var callback = function(mutationsList) {
-				for(var mutation in mutationsList) {
-					if (mutationsList[mutation].type == 'childList') {
-						runq();
-						break;
+	// Set flood posts
+	function setFloodPosts() {
+		if (floodEnabled) {
+			var stats = {};
+			var firstId = null;
+			//console.log("==[ Name Fags ]=================================================");
+			var posts = $('div.post:not(.post-hover)').not('.you');
+			$(posts).each(function () {
+				var id = $(this).find('p > span.poster_id').first().text();
+				if(firstId != null) {
+					if (!(id in stats)) {
+						stats[id] = {count: 0, namefag: false, floodcount: 0};
+					}
+					stats[id].count++;
+					if(!stats[id].namefag) {
+						var name = immediateText($(this).find('p > label span.name').first());
+						var trip = $(this).find('p > label > span.trip').first().text();
+						stats[id].namefag = !getSetting('fadenametripregex').test(name+'-'+trip);
+						//if(stats[id].namefag) {
+						//	console.log(id + '=' + stats[id].namefag + ', ' + name + ', ' + trip);
+						//}
+					}
+					if(stats[id].namefag) {
+						if(getSetting('fadenametripfloodvalue') < 0) {
+							stats[id].floodcount = getSetting('floodThreshold') + stats[id].count;
+						} else {
+							stats[id].floodcount = getSetting('fadenametripfloodvalue');
+						}
+					} else {
+						stats[id].floodcount = stats[id].count;
 					}
 				}
-			};
+				if (firstId == null) {
+					firstId = id;
+				}
+			});
+			$.each(stats, function (key, value) {
+				if (key !== firstId) {
+					var ids = $('span.poster_id:contains("' + key + '")');
+					if (value.floodcount > getSetting('floodThreshold') || value.namefag) {
+						if(getSetting('strikeThroughNameFags') && value.namefag) {
+							$(ids).each(function() {
+								$(this).closest('div.post').find('p > label span.name').first().css('text-decoration','line-through');
+							});
+						}
+						if (getSetting('floodBehavior') === 'fade') {
+							var intensity = value.floodcount;
+							if (intensity > getSetting('floodVanish')) {
+								intensity = getSetting('floodVanish');
+							}
+							intensity = ((getSetting('floodVanish') - getSetting('floodThreshold')) - (intensity - getSetting('floodThreshold'))) / (getSetting('floodVanish') - getSetting('floodThreshold'));
+							if (intensity < 0.1) {
+								intensity = 0.1;
+							}
+							$(ids).each(function () {
+								$(this).closest('div.post').css('opacity', intensity);
+								$(this).closest('div.post').hover(function () {
+									$(this).animate({opacity: 1.0}, getSetting('updateDelay'));
+								}, function () {
+									$(this).animate({opacity: intensity}, getSetting('updateDelay'));
+								});
+							});
+						} else if (getSetting('floodBehavior') === 'hide') {
+							if (value.count >= getSetting('floodVanish')) {
+								$(ids).each(function () {
+									$(this).closest('div.post').hide();
+								});
+							}
+						}
+					} else {
+						$(ids).each(function () {
+							$(this).closest('div.post').css('opacity', 1.0);
+						});
+					}
+				}
+			});
+		}
+		return $.Deferred().resolve();
+	}
 
-			// Create an observer instance linked to the callback function
-			var observer = new MutationObserver(callback);
+	// Update navigation
+	function updateNav() {
+		updateNavCounts();
+		updateNavGraphics();
+		updateNavPostRate();
+	}
 
-			// Start observing the target node for configured mutations
-			observer.observe(targetNode, config);
+	// Update navigation counts
+	function updateNavCounts() {
+		var fontSize = -1;
+		var lineHeight;
+
+		if(currq > qposts.length) { currq = qposts.length; }
+		if(curryou > youposts.length) { curryou = youposts.length; }
+
+		for(i=0; i<qposts.length; i++) {
+			var el = $(qposts).get(i);
+			if(fontSize == -1) {
+				fontSize = $(el).css('font-size');
+				lineHeight = Math.floor(parseInt(fontSize.replace('px', '')) * 1.5);
+			}
+			if(($(el).offset().top + $(el).height() - 2.25*lineHeight) > $(window).scrollTop()) {
+				currq = i;
+				break;
+			}
+		}
+
+		for(i=0; i<youposts.length; i++) {
+			var el = $(youposts).get(i);
+			if(fontSize == -1) {
+				fontSize = $(el).css('font-size');
+				lineHeight = Math.floor(parseInt(fontSize.replace('px', '')) * 1.5);
+			}
+			if(($(el).offset().top + $(el).height() - 2.25*lineHeight) > $(window).scrollTop()) {
+				curryou = i;
+				break;
+			}
+		}
+
+		// TODO: check for duplicates and remove from counts
+		$('.qcount').text("(" + (currq+1) + ":" + qposts.length + ")");
+		$('.youcount').text("(" + (curryou+1) + ":" + youposts.length + ")");
+	}
+
+	// Update navigation graphics
+	function updateNavGraphics() {
+		var sidenav = $('#sidenav');
+		if(sidenav.length) {
+			$(sidenav).css('height', $(window).height() - $('div.boardlist').height());
+			minheight = ctx.canvas.height / ($(window).height() - $('div.boardlist').height()); // 1px
+			ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+			// Draw nav q posts
+			qnavposts = [];
+			ctx.fillStyle = getSetting('qcolor');
+			for (i = 0; i < qposts.length; i++) {
+				// TODO: check if we have already added post, don't draw it again
+				var el = $(qposts).get(i);
+				var height = $(el).height() / $(document).height() * ctx.canvas.height;
+				if(height < minheight) height = minheight;
+				qnavposts[i] = {
+					x : borderSz,
+					y : $(el).offset().top / $(document).height() * ctx.canvas.height,
+					width : ctx.canvas.width - borderSz*2,
+					height : height
+				};
+				ctx.fillRect(qnavposts[i].x, qnavposts[i].y, qnavposts[i].width, qnavposts[i].height);
+			}
+
+			// Draw nav you posts
+			younavposts = [];
+			ctx.fillStyle = getSetting('youscrollcolor') || getSetting('youcolor');
+			for (i = 0; i < youposts.length; i++) {
+				// TODO: check if we have already added post, don't add it again
+				var el = $(youposts).get(i);
+				var height = $(el).height() / $(document).height() * ctx.canvas.height;
+				if(height < minheight) height = minheight;
+				younavposts[i] = {
+					x : borderSz,
+					y : $(el).offset().top / $(document).height() * ctx.canvas.height,
+					width : ctx.canvas.width - borderSz*2,
+					height : height
+				};
+				ctx.fillRect(younavposts[i].x, younavposts[i].y, younavposts[i].width, younavposts[i].height);
+			}
+
+			// Update nav window
+			ctx.fillStyle = getSetting('scrollcolor');
+			var heightScale = ctx.canvas.height / $(document).height(),
+				scrollStart = $(window).scrollTop() * heightScale,
+				scrollHeight = $(window).height() * heightScale,
+				scrollMinHeight = getSetting('scrollminheight') * ctx.canvas.height / $(window).height();
+			if (scrollHeight < scrollMinHeight) {
+				scrollStart -= (scrollMinHeight - scrollHeight) / 4;
+				scrollHeight += (scrollMinHeight - scrollHeight) * 3 / 4;
+				if (scrollStart < 0) {
+					scrollStart = 0;
+				} else if (scrollStart + scrollHeight > ctx.canvas.height) {
+					scrollStart = ctx.canvas.height - scrollHeight;
+				}
+			}
+			ctx.fillRect(
+				ctx.canvas.width / 4,
+				scrollStart,
+				ctx.canvas.width / 2,
+				scrollHeight
+			);
+
+			// Add red marker at bottom of >750 posts
+			if($('#thread_stats_posts').text() > 750) {
+				var barHeight = (4 * ctx.canvas.height) / ($(window).height() - $('div.boardlist').height());
+				ctx.fillStyle = '#f66';
+				ctx.fillRect(
+					0,
+					ctx.canvas.height - barHeight,
+					ctx.canvas.width,
+					barHeight
+				);
+			}
+		}
+	}
+
+	// Updates post rate count/chart
+	function updateNavPostRate() {
+		var posts = $('div.post').not('.post-hover');
+		var startPost = posts.length - (getSetting('rateHistoryLen') + getSetting('rateAvgLen')) + 1;
+		if(startPost < 1) startPost = 1;
+		var start = $($($(posts).get(0)).find('.intro time').get(0)).attr('unixtime'); //$('div.post:first .intro time').attr('unixtime');
+		ratehistory = [];
+		timehistory = [];
+		for(var i=startPost; i<posts.length; i++) {
+			// TODO: check if we have already added post, don't add it again
+			var step = $($($(posts).get(i)).find('.intro time').get(0)).attr('unixtime'); //$($('div.post .intro time').get(i)).attr('unixtime');
+			timehistory[timehistory.length] = step;
+			if(timehistory.length - getSetting('rateAvgLen') - 1 >= 0) {
+				var avgend = timehistory[timehistory.length - 1];
+				var avgstart = timehistory[timehistory.length - getSetting('rateAvgLen') - 1];
+				ratehistory[ratehistory.length] = getSetting('rateAvgLen') / ((avgend - avgstart) / 60);
+			} else {
+				ratehistory[ratehistory.length] = 0;
+			}
+		}
+		//console.log(ratehistory);
+
+		if (ratehistory.length) {
+			$('.postRate').text(ratehistory[ratehistory.length-1].toFixed(1));
+		}
+
+		if(ratehistory.length > getSetting('rateAvgLen')) {
+			var maxRate = Math.max.apply(null, ratehistory);
+			var minRate = Math.min.apply(null, ratehistory);
+			//console.log("Max: " + maxRate);
+			//console.log("Min: " + minRate);
+			if(minRate > (maxRate - 0.5)) {
+				minRate = maxRate - 0.5;
+				maxRate = maxRate + 0.5;
+			}
+			if(minRate < 0) {
+				minRate = 0;
+			}
+			var maxTime = timehistory[timehistory.length-1];
+			var minTime = timehistory[getSetting('rateAvgLen')];
+			$('.postRateChart').each(function() {
+				var gctx = $(this).get(0).getContext('2d');
+				gctx.clearRect(0, 0, gctx.canvas.width, gctx.canvas.height);
+				gctx.strokeStyle = $('div.boardlist a').css('color');
+				gctx.beginPath();
+				var x = 0;
+				var y = gctx.canvas.height - (ratehistory[getSetting('rateAvgLen')] - minRate)/(maxRate - minRate) * gctx.canvas.height;
+				gctx.moveTo(x, y);
+				for(var i=getSetting('rateAvgLen')+1; i<ratehistory.length; i++) {
+					x = (timehistory[i] - minTime)/(maxTime - minTime) * gctx.canvas.width;
+					y = gctx.canvas.height - (ratehistory[i] - minRate)/(maxRate - minRate) * gctx.canvas.height;
+					gctx.lineTo(x, y);
+				}
+				gctx.stroke();
+				gctx.closePath();
+			});
+		}
+	}
+
+
+	qjs_main.Q = function() {
+		qnav();
+		younav();
+		togglenav();
+		postratenav();
+		sidenav();
+		runq();
+
+		// Scroll back to target post after qjs controls added
+		setTimeout(function() {
+			var hashBackup = document.location.hash;
+			if (hashBackup) {
+				document.location.hash = '';
+				document.location.hash = hashBackup;
+				$(window).scrollTop($(window).scrollTop() - 60);
+			}
+		}, 0);
+
+		// Select the node that will be observed for mutations
+		var targetNode = $('div.thread')[0];
+
+		// Options for the observer (which mutations to observe)
+		var config = { childList: true };
+
+		// Callback function to execute when mutations are observed
+		var callback = function(mutationsList) {
+			for(var mutation in mutationsList) {
+				if (mutationsList[mutation].type == 'childList') {
+					runq();
+					break;
+				}
+			}
 		};
-	}(qjs_main, jQuery));
+
+		// Create an observer instance linked to the callback function
+		var observer = new MutationObserver(callback);
+
+		// Start observing the target node for configured mutations
+		observer.observe(targetNode, config);
+	};
 
 	// Attach snippets to ready/change events
 	// Wait for 8kun code that adds (you)s to run
