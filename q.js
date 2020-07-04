@@ -1,4 +1,133 @@
 jQuery(function($) {
+	// User Settings
+	// To override some or all of these settings you can set them in the 8kun
+	// "Options > User JS" box like this:
+	/*
+
+window.qjsSettings = {
+  youcolor: '#ffffbb',
+};
+
+// You can also override settings for specific boards:
+
+window.qjsSettings = {
+  youcolor: '#ffffbb',
+  boards: {
+    qrb: {
+      youcolor: '#334455',
+    },
+  },
+};
+
+	*/
+	// It's better to change the settings this way, WITHOUT modifying this
+	// script's code, because that way it's easier to update to new versions
+	// later!
+
+	var defaultSettings = {
+		qflair: '', // Examples: REAL, &rarr;
+		qcolor: '#99d6ff',
+		youcolor: '#F3D74D',
+		scrollcolor: 'rgba(255, 255, 255, 0.9)',
+		scrollminheight: 12,
+		scrollbackcolor: '#333',
+		scrolltime: 0, // ms
+		// youscrollcolor: (same as 'youcolor' by default),
+		updateDelay: 30, // ms
+		sidenavWidth: 30, // px
+
+		floodEnabled: false,
+		floodThreshold: 15, // min # posts before beginning fade
+		floodVanish: 25, // max # posts before completed fade/hide
+		floodBehavior: 'fade', // hide, fade
+		fadenametripregex: /^(Anon(ymous)?-.*|.*-!!Hs1Jq13jV6)$/i,
+		fadenametripfloodvalue: -1, // Effective post count for fading, or -1 for auto of floodThreshold+post count
+		strikeThroughNameFags: true,
+
+		rateHistoryLen: 50, // Data points on chart
+		rateAvgLen: 10, // Number of data points to average for instantaneous rate
+
+		extraStyles: '',
+
+		boards: {
+			qrb: {
+				youcolor: '#2a3a4a',
+				youscrollcolor: '#4a6376',
+				extraStyles: `
+.post > div.qjs-controls a {
+  color: #ddaadd;
+}
+.body small {
+  color: #339955;
+}
+`,
+			},
+			abcu: { // overuses !important in board styles
+				youcolor: '#f3e77d !important',
+				youscrollcolor: '#f3e77d',
+				extraStyles: `
+.desktop-style div.boardlist:not(.bottom), .boardlist:hover {
+  opacity: 1;
+  background: rgb(195,225,255) !important;
+  color: #cc0000 !important;
+}
+#qjs_overlay {
+  color: #cc3333;
+}
+				`,
+			},
+		},
+	};
+
+	var qjs_main = window.qjs_main = window.qjs_main || {};
+	qjs_main.defaultSettings = defaultSettings;
+
+	var boardName = window.location.pathname.match(/\/([^\/]+)\//)[1];
+	var opPostId = window.location.href.match(/\/(\d+)\.html/)[1];
+
+	function getSetting(name) {
+		var s = window.qjsSettings;
+		if (s && s.boards && boardName && s.boards[boardName] && name in s.boards[boardName]) {
+			return s.boards[boardName][name];
+		}
+		if (s && name in s) {
+			return s[name];
+		}
+		if (boardName && defaultSettings.boards[boardName] && name in defaultSettings.boards[boardName]) {
+			return defaultSettings.boards[boardName][name];
+		}
+		return defaultSettings[name];
+	}
+	qjs_main.getSetting = getSetting;
+
+	// Suggestions to consider for future development
+	// from 589388.html#590283 ...shill detection features, such as
+	//          easily knowing the proportion of posts from a user that don't link.
+	//          I'd want to know any ID that was posting > 1/3 posts targetting noone.
+
+	// TODO: Behavior for post hover should be to show original post visual before all q.js mods
+	// TODO: Add flags to turn on/off features
+	// TODO: Custom-regex -> post color/fade (auto-filter by selecting text and choosing new menu item?)
+	//       Examples: daily reminder, guys, check this out, shill, get out, filtered, tell us more, archive everything
+	// TODO: Manual shade
+	// TODO: remove Q trip codes from post content?
+	// TODO: remove Q from end of post content if not a Q post?
+	// TODO: recognize all of known Q trip codes? (make to sure to exclude known comps)
+	// TODO: Links to reset on current Q/(you) post
+	// TODO: Link to go to latest post (end key doesn't always work, but try capturing that as well?)
+	// TODO: Keyboard shortcuts for navigation
+	// TODO: Current/Total overall post navigation
+	// TODO: Remap end key to always go to end of page
+	// TODO: Check box for each post to mark as "read", "spam", ?
+	// TODO: Autocorrect all-caps posts (50% threshold)?
+	// TODO: Correct broken links but remove referral when clicked?
+	// TODO: Make flood post fading non-linear to give leniency to posters just passing flood threshold
+	// TODO: Penalize reposts in flood detection (if id's different, merge?) ?
+	// TODO: Scorecard of posters ordered by post count (post rate, reply count, ...)?
+	// TODO: Color/shade posts where there are no references and no question marks
+	// TODO: If Q or trip used in name field, strike them out or replace with Anonymous?
+	// TODO: embedded posts in Q posts don't have background-color and inherit Q color, fix?
+
 	var $allPosts = null;
 	var autoUpdateInterval;
 	var autoUpdateFinishedCount = 0;
@@ -320,8 +449,6 @@ jQuery(function($) {
 	}
 
 	// Misc styles
-	var boardName = window.location.pathname.match(/\/([^\/]+)\//)[1];
-	var postId = window.location.href.match(/\/(\d+)\.html/)[1];
 	$('head').append(
 `<style>
 div.boardlist > span.sub > a {
@@ -333,7 +460,7 @@ span.post-num {
 	opacity: 0.6;
 	font-size: 81%;
 }
-a[href^="/${boardName}/res/"]:not([href^="/${boardName}/res/${postId}.html"]):not([href*="+50.html"]) {
+a[href^="/${boardName}/res/"]:not([href^="/${boardName}/res/${opPostId}.html"]):not([href*="+50.html"]) {
 	background: #ffb;
 }
 span.qjs-pastebin {
@@ -389,6 +516,9 @@ span.qjs-pastebin a {
 #qjs_post_count {
 	font-size: 36px;
 }
+
+/* Extra styles */
+${getSetting('extraStyles')}
 </style>`
 	);
 
@@ -413,58 +543,7 @@ span.qjs-pastebin a {
 	$(document).on('new_post', updatePostCount);
 	updatePostCount();
 
-	// User Settings
-	var anonsw = {
-		qflair: '', // Examples: REAL, &rarr;
-		qcolor: '#99d6ff',
-		youcolor: '#F3D74D',
-		scrollcolor: 'rgba(255, 255, 255, 0.9)',
-		scrollbackcolor: '#333',
-		scrolltime: 0, // ms
-		updateDelay: 30, // ms
-		sidenavWidth: 30, // px
-
-		floodEnabled: false,
-		floodThreshold: 15, // min # posts before beginning fade
-		floodVanish: 25, // max # posts before completed fade/hide
-		floodBehavior: 'fade', // hide, fade
-		fadenametripregex: /^(Anon(ymous)?-.*|.*-!!Hs1Jq13jV6)$/i,
-		fadenametripfloodvalue: -1, // Effective post count for fading, or -1 for auto of floodThreshold+post count
-		strikeThroughNameFags: true,
-
-		rateHistoryLen: 50, // Data points on chart
-		rateAvgLen: 10 // Number of data points to average for instantaneous rate
-
-		// Suggestions from 589388.html#590283
-		//    ...shill detection features, such as
-		//          easily knowing the proportion of posts from a user that don't link.
-		//          I'd want to know any ID that was posting > 1/3 posts targetting noone.
-
-		// TODO: Behavior for post hover should be to show original post visual before all q.js mods
-		// TODO: Add flags to turn on/off features
-		// TODO: Custom-regex -> post color/fade (auto-filter by selecting text and choosing new menu item?)
-		//       Examples: daily reminder, guys, check this out, shill, get out, filtered, tell us more, archive everything
-		// TODO: Manual shade
-		// TODO: remove Q trip codes from post content?
-		// TODO: remove Q from end of post content if not a Q post?
-		// TODO: recognize all of known Q trip codes? (make to sure to exclude known comps)
-		// TODO: Links to reset on current Q/(you) post
-		// TODO: Link to go to latest post (end key doesn't always work, but try capturing that as well?)
-		// TODO: Keyboard shortcuts for navigation
-		// TODO: Current/Total overall post navigation
-		// TODO: Remap end key to always go to end of page
-		// TODO: Check box for each post to mark as "read", "spam", ?
-		// TODO: Autocorrect all-caps posts (50% threshold)?
-		// TODO: Correct broken links but remove referral when clicked?
-		// TODO: Make flood post fading non-linear to give leniency to posters just passing flood threshold
-		// TODO: Penalize reposts in flood detection (if id's different, merge?) ?
-		// TODO: Scorecard of posters ordered by post count (post rate, reply count, ...)?
-		// TODO: Color/shade posts where there are no references and no question marks
-		// TODO: If Q or trip used in name field, strike them out or replace with Anonymous?
-		// TODO: embedded posts in Q posts don't have background-color and inherit Q color, fix?
-	};
-
-	(function( anonsw_main, $, undefined ) {
+	(function(qjs_main, $, undefined) {
 		// House keeping variables
 		var qposts = [];
 		var currq = -1;
@@ -477,6 +556,7 @@ span.qjs-pastebin a {
 		var	scrollWd;
 		var minheight;
 		var ratehistory = [];
+		var floodEnabled = getSetting('floodEnabled');
 
 		// On scroll stop. SO #9144560
 		(function ($) {
@@ -518,11 +598,11 @@ span.qjs-pastebin a {
 		function myScrollTo(el) {
 			$('html, body').animate({
 				scrollTop: $(el).offset().top - $('div.boardlist').height()
-			}, anonsw.scrolltime);
+			}, getSetting('scrolltime'));
 		}
 
 		// Scroll to next Q
-		anonsw_main.nextq = function() {
+		qjs_main.nextq = function() {
 			if(qposts.length > 0) {
 				if(currq < qposts.length-1) {
 					currq++;
@@ -532,7 +612,7 @@ span.qjs-pastebin a {
 		};
 
 		// Scroll to last Q
-		anonsw_main.lastq = function() {
+		qjs_main.lastq = function() {
 			if(qposts.length > 0) {
 				currq = qposts.length - 1;
 				myScrollTo($(qposts).get(currq));
@@ -540,7 +620,7 @@ span.qjs-pastebin a {
 		};
 
 		// Scroll to previous Q
-		anonsw_main.prevq = function() {
+		qjs_main.prevq = function() {
 			if(qposts.length > 0) {
 				if(currq > 0) {
 					currq--;
@@ -550,7 +630,7 @@ span.qjs-pastebin a {
 		};
 
 		// Scroll to first Q
-		anonsw_main.firstq = function() {
+		qjs_main.firstq = function() {
 			if(qposts.length > 0) {
 				currq = 0;
 				myScrollTo($(qposts).get(currq));
@@ -558,7 +638,7 @@ span.qjs-pastebin a {
 		};
 
 		// Scroll to next (You)
-		anonsw_main.nextyou = function() {
+		qjs_main.nextyou = function() {
 			if(youposts.length > 0) {
 				if(curryou < youposts.length-1) {
 					curryou++;
@@ -568,7 +648,7 @@ span.qjs-pastebin a {
 		};
 
 		// Scroll to last (You)
-		anonsw_main.lastyou = function() {
+		qjs_main.lastyou = function() {
 			if(youposts.length > 0) {
 				curryou = youposts.length - 1;
 				myScrollTo($(youposts).get(curryou));
@@ -576,7 +656,7 @@ span.qjs-pastebin a {
 		};
 
 		// Scroll to previous (You)
-		anonsw_main.prevyou = function() {
+		qjs_main.prevyou = function() {
 			if(youposts.length > 0) {
 				if(curryou > 0) {
 					curryou--;
@@ -586,7 +666,7 @@ span.qjs-pastebin a {
 		};
 
 		// Scroll to first (You)
-		anonsw_main.firstyou = function() {
+		qjs_main.firstyou = function() {
 			if(youposts.length > 0) {
 				curryou = 0;
 				myScrollTo($(youposts).get(curryou));
@@ -595,17 +675,17 @@ span.qjs-pastebin a {
 
 		// Inserts Q navigation links
 		function qnav() {
-			$('div.boardlist').append('<span>[ <a href="javascript:anonsw_main.firstq();"><i class="fa fa-step-backward"></i></a> <a href="javascript:anonsw_main.prevq();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">Q</span> <span class="qcount">(?:?)</span> <a href="javascript:anonsw_main.nextq();"><i class="fa fa-forward"></i></a> <a href="javascript:anonsw_main.lastq();"><i class="fa fa-step-forward"></i></a> ]</span>');
+			$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.firstq();"><i class="fa fa-step-backward"></i></a> <a href="javascript:qjs_main.prevq();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">Q</span> <span class="qcount">(?:?)</span> <a href="javascript:qjs_main.nextq();"><i class="fa fa-forward"></i></a> <a href="javascript:qjs_main.lastq();"><i class="fa fa-step-forward"></i></a> ]</span>');
 		}
 
 		// Inserts (You) navigation links
 		function younav() {
-			$('div.boardlist').append('<span>[ <a href="javascript:anonsw_main.firstyou();"><i class="fa fa-step-backward"></i></a> <a href="javascript:anonsw_main.prevyou();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">(You)</span> <span class="youcount">(?:?)</span> </span><a href="javascript:anonsw_main.nextyou();"><i class="fa fa-forward"></i></a> <a href="javascript:anonsw_main.lastyou();"><i class="fa fa-step-forward"></i></a> ]</span>');
+			$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.firstyou();"><i class="fa fa-step-backward"></i></a> <a href="javascript:qjs_main.prevyou();"><i class="fa fa-backward"></i></a> <span style="filter:brightness(70%);">(You)</span> <span class="youcount">(?:?)</span> </span><a href="javascript:qjs_main.nextyou();"><i class="fa fa-forward"></i></a> <a href="javascript:qjs_main.lastyou();"><i class="fa fa-step-forward"></i></a> ]</span>');
 		}
 
 		// Inserts feature toggle links
 		function togglenav() {
-			$('div.boardlist').append('<span>[ <a href="javascript:anonsw_main.toggleFlood();">Turn Post Fading <span class="toggleFloodState">Off</span></a> ]</span>')
+			$('div.boardlist').append('<span>[ <a href="javascript:qjs_main.toggleFlood();">Post Fading <span class="toggleFloodState">' + (floodEnabled ? 'Off' : 'On') + '</span></a> ]</span>')
 		}
 
 		// Inserts post rate count/chart
@@ -633,14 +713,14 @@ span.qjs-pastebin a {
 			$(nav).css('position', 'fixed');
 			$(nav).css('top', $('div.boardlist').height());
 			$(nav).css('right', 0);
-			$(nav).css('width', anonsw.sidenavWidth);
+			$(nav).css('width', getSetting('sidenavWidth'));
 			$(nav).css('height', $(window).height() - $('div.boardlist').height());
-			$(nav).css('background-color', anonsw.scrollbackcolor);
-			$('body').css('margin-right', anonsw.sidenavWidth);
+			$(nav).css('background-color', getSetting('scrollbackcolor'));
+			$('body').css('margin-right', getSetting('sidenavWidth'));
 			ctx = $('#sidenav').get(0).getContext('2d');
 			//ctx.canvas.height = $(document).height() - $('div.boardlist').height();
 			ctx.canvas.height = 2048;
-			ctx.canvas.width = anonsw.sidenavWidth;
+			ctx.canvas.width = getSetting('sidenavWidth');
 			borderSz = 1;
 			scrollWd = ctx.canvas.width / 2;
 		}
@@ -649,28 +729,28 @@ span.qjs-pastebin a {
 		$(window).on('scroll', function(e) {
 			updateNavCounts();
 			updateNavGraphics();
-		}, anonsw.updateDelay);
+		}, getSetting('updateDelay'));
 
 		// Update nav when resize stops
 		$(window).on('resize', function(e) {
 			updateNav();
-		}, anonsw.updateDelay);
+		}, getSetting('updateDelay'));
 
 		// Toggle post flooding
-		anonsw_main.toggleFlood = function() {
-			if(anonsw.floodEnabled) {
-				anonsw.floodEnabled = false;
+		qjs_main.toggleFlood = function() {
+			if (floodEnabled) {
+				floodEnabled = false;
 				$('.toggleFloodState').text('On');
-				if(anonsw.floodBehavior === 'fade') {
+				if(getSetting('floodBehavior') === 'fade') {
 					$('span.poster_id').each(function () {
 						$(this).closest('div.post').css('opacity', 1);
 						$(this).closest('div.post').off('mouseenter mouseleave');
 					});
-				} else if(anonsw.floodBehavior === 'hide') {
+				} else if(getSetting('floodBehavior') === 'hide') {
 					$(this).closest('div.post').show();
 				}
 			} else {
-				anonsw.floodEnabled = true;
+				floodEnabled = true;
 				$('.toggleFloodState').text('Off');
 				runq();
 			}
@@ -751,12 +831,12 @@ span.qjs-pastebin a {
 				var $this = $(this);
 				if ($this.find('span.trip:contains("!!Hs1Jq13jV6")').length) {
 					qposts.push(this);
-					$this.css('background-color', anonsw.qcolor);
-					if (anonsw.qflair !== '') {
+					$this.css('background-color', getSetting('qcolor'));
+					if (getSetting('qflair') !== '') {
 						$this
 							.find('p.intro > label > span.trip')
 							.first()
-							.prepend(anonsw.qflair + ' ');
+							.prepend(getSetting('qflair') + ' ');
 					}
 				}
 				this.classList.add('qjs-processed-q');
@@ -786,7 +866,14 @@ span.qjs-pastebin a {
 				var $this = $(this);
 				if ($this.find('span.own_post, small:icontains("(You)")').length) {
 					youposts.push(this);
-					$this.css('background-color', anonsw.youcolor);
+					var youcolor = getSetting('youcolor');
+					if (/!important/.test(youcolor)) {
+						// Workaround for boards that have badly written styles
+						// https://bugs.jquery.com/ticket/2066
+						$this.css('cssText', 'background-color: ' + youcolor);
+					} else {
+						$this.css('background-color', youcolor);
+					}
 				}
 				this.classList.add('qjs-processed-you');
 			});
@@ -794,7 +881,7 @@ span.qjs-pastebin a {
 
 		// Set flood posts
 		function setFloodPosts() {
-			if(anonsw.floodEnabled) {
+			if (floodEnabled) {
 				var stats = {};
 				var firstId = null;
 				//console.log("==[ Name Fags ]=================================================");
@@ -809,16 +896,16 @@ span.qjs-pastebin a {
 						if(!stats[id].namefag) {
 							var name = immediateText($(this).find('p > label span.name').first());
 							var trip = $(this).find('p > label > span.trip').first().text();
-							stats[id].namefag = !anonsw.fadenametripregex.test(name+'-'+trip);
+							stats[id].namefag = !getSetting('fadenametripregex').test(name+'-'+trip);
 							//if(stats[id].namefag) {
 							//	console.log(id + '=' + stats[id].namefag + ', ' + name + ', ' + trip);
 							//}
 						}
 						if(stats[id].namefag) {
-							if(anonsw.fadenametripfloodvalue < 0) {
-								stats[id].floodcount = anonsw.floodThreshold + stats[id].count;
+							if(getSetting('fadenametripfloodvalue') < 0) {
+								stats[id].floodcount = getSetting('floodThreshold') + stats[id].count;
 							} else {
-								stats[id].floodcount = anonsw.fadenametripfloodvalue;
+								stats[id].floodcount = getSetting('fadenametripfloodvalue');
 							}
 						} else {
 							stats[id].floodcount = stats[id].count;
@@ -831,31 +918,31 @@ span.qjs-pastebin a {
 				$.each(stats, function (key, value) {
 					if (key !== firstId) {
 						var ids = $('span.poster_id:contains("' + key + '")');
-						if (value.floodcount > anonsw.floodThreshold || value.namefag) {
-							if(anonsw.strikeThroughNameFags && value.namefag) {
+						if (value.floodcount > getSetting('floodThreshold') || value.namefag) {
+							if(getSetting('strikeThroughNameFags') && value.namefag) {
 								$(ids).each(function() {
 									$(this).closest('div.post').find('p > label span.name').first().css('text-decoration','line-through');
 								});
 							}
-							if (anonsw.floodBehavior === 'fade') {
+							if (getSetting('floodBehavior') === 'fade') {
 								var intensity = value.floodcount;
-								if (intensity > anonsw.floodVanish) {
-									intensity = anonsw.floodVanish;
+								if (intensity > getSetting('floodVanish')) {
+									intensity = getSetting('floodVanish');
 								}
-								intensity = ((anonsw.floodVanish - anonsw.floodThreshold) - (intensity - anonsw.floodThreshold)) / (anonsw.floodVanish - anonsw.floodThreshold);
+								intensity = ((getSetting('floodVanish') - getSetting('floodThreshold')) - (intensity - getSetting('floodThreshold'))) / (getSetting('floodVanish') - getSetting('floodThreshold'));
 								if (intensity < 0.1) {
 									intensity = 0.1;
 								}
 								$(ids).each(function () {
 									$(this).closest('div.post').css('opacity', intensity);
 									$(this).closest('div.post').hover(function () {
-										$(this).animate({opacity: 1.0}, anonsw.updateDelay);
+										$(this).animate({opacity: 1.0}, getSetting('updateDelay'));
 									}, function () {
-										$(this).animate({opacity: intensity}, anonsw.updateDelay);
+										$(this).animate({opacity: intensity}, getSetting('updateDelay'));
 									});
 								});
-							} else if (anonsw.floodBehavior === 'hide') {
-								if (value.count >= anonsw.floodVanish) {
+							} else if (getSetting('floodBehavior') === 'hide') {
+								if (value.count >= getSetting('floodVanish')) {
 									$(ids).each(function () {
 										$(this).closest('div.post').hide();
 									});
@@ -926,7 +1013,7 @@ span.qjs-pastebin a {
 
 				// Draw nav q posts
 				qnavposts = [];
-				ctx.fillStyle = anonsw.qcolor;
+				ctx.fillStyle = getSetting('qcolor');
 				for (i = 0; i < qposts.length; i++) {
 					// TODO: check if we have already added post, don't draw it again
 					var el = $(qposts).get(i);
@@ -943,7 +1030,7 @@ span.qjs-pastebin a {
 
 				// Draw nav you posts
 				younavposts = [];
-				ctx.fillStyle = anonsw.youcolor;
+				ctx.fillStyle = getSetting('youcolor');
 				for (i = 0; i < youposts.length; i++) {
 					// TODO: check if we have already added post, don't add it again
 					var el = $(youposts).get(i);
@@ -959,7 +1046,7 @@ span.qjs-pastebin a {
 				}
 
 				// Update nav window
-				ctx.fillStyle = anonsw.scrollcolor;
+				ctx.fillStyle = getSetting('scrollcolor');
 				ctx.fillRect(
 					scrollWd / 2,
 					$(window).scrollTop() / $(document).height() * ctx.canvas.height,
@@ -984,7 +1071,7 @@ span.qjs-pastebin a {
 		// Updates post rate count/chart
 		function updateNavPostRate() {
 			var posts = $('div.post').not('.post-hover');
-			var startPost = posts.length - (anonsw.rateHistoryLen + anonsw.rateAvgLen) + 1;
+			var startPost = posts.length - (getSetting('rateHistoryLen') + getSetting('rateAvgLen')) + 1;
 			if(startPost < 1) startPost = 1;
 			var start = $($($(posts).get(0)).find('.intro time').get(0)).attr('unixtime'); //$('div.post:first .intro time').attr('unixtime');
 			ratehistory = [];
@@ -993,10 +1080,10 @@ span.qjs-pastebin a {
 				// TODO: check if we have already added post, don't add it again
 				var step = $($($(posts).get(i)).find('.intro time').get(0)).attr('unixtime'); //$($('div.post .intro time').get(i)).attr('unixtime');
 				timehistory[timehistory.length] = step;
-				if(timehistory.length - anonsw.rateAvgLen - 1 >= 0) {
+				if(timehistory.length - getSetting('rateAvgLen') - 1 >= 0) {
 					var avgend = timehistory[timehistory.length - 1];
-					var avgstart = timehistory[timehistory.length - anonsw.rateAvgLen - 1];
-					ratehistory[ratehistory.length] = anonsw.rateAvgLen / ((avgend - avgstart) / 60);
+					var avgstart = timehistory[timehistory.length - getSetting('rateAvgLen') - 1];
+					ratehistory[ratehistory.length] = getSetting('rateAvgLen') / ((avgend - avgstart) / 60);
 				} else {
 					ratehistory[ratehistory.length] = 0;
 				}
@@ -1007,7 +1094,7 @@ span.qjs-pastebin a {
 				$('.postRate').text(ratehistory[ratehistory.length-1].toFixed(1));
 			}
 
-			if(ratehistory.length > anonsw.rateAvgLen) {
+			if(ratehistory.length > getSetting('rateAvgLen')) {
 				var maxRate = Math.max.apply(null, ratehistory);
 				var minRate = Math.min.apply(null, ratehistory);
 				//console.log("Max: " + maxRate);
@@ -1020,16 +1107,16 @@ span.qjs-pastebin a {
 					minRate = 0;
 				}
 				var maxTime = timehistory[timehistory.length-1];
-				var minTime = timehistory[anonsw.rateAvgLen];
+				var minTime = timehistory[getSetting('rateAvgLen')];
 				$('.postRateChart').each(function() {
 					var gctx = $(this).get(0).getContext('2d');
 					gctx.clearRect(0, 0, gctx.canvas.width, gctx.canvas.height);
 					gctx.strokeStyle = $('div.boardlist a').css('color');
 					gctx.beginPath();
 					var x = 0;
-					var y = gctx.canvas.height - (ratehistory[anonsw.rateAvgLen] - minRate)/(maxRate - minRate) * gctx.canvas.height;
+					var y = gctx.canvas.height - (ratehistory[getSetting('rateAvgLen')] - minRate)/(maxRate - minRate) * gctx.canvas.height;
 					gctx.moveTo(x, y);
-					for(var i=anonsw.rateAvgLen+1; i<ratehistory.length; i++) {
+					for(var i=getSetting('rateAvgLen')+1; i<ratehistory.length; i++) {
 						x = (timehistory[i] - minTime)/(maxTime - minTime) * gctx.canvas.width;
 						y = gctx.canvas.height - (ratehistory[i] - minRate)/(maxRate - minRate) * gctx.canvas.height;
 						gctx.lineTo(x, y);
@@ -1041,7 +1128,7 @@ span.qjs-pastebin a {
 		}
 
 
-		anonsw_main.Q = function() {
+		qjs_main.Q = function() {
 			qnav();
 			younav();
 			togglenav();
@@ -1081,9 +1168,9 @@ span.qjs-pastebin a {
 			// Start observing the target node for configured mutations
 			observer.observe(targetNode, config);
 		};
-	}( window.anonsw_main = window.anonsw_main || {}, jQuery ));
+	}(qjs_main, jQuery));
 
 	// Attach snippets to ready/change events
 	// Wait for 8kun code that adds (you)s to run
-	setTimeout(anonsw_main.Q, 30);
+	setTimeout(qjs_main.Q, 30);
 });
