@@ -65,6 +65,7 @@ window.qjsSettings = {
 			abcu: { // overuses !important in board styles
 				youcolor: '#f3e77d !important',
 				youscrollcolor: '#f3e77d',
+				scrollbackcolor: 'rgba(51, 51, 51, 0.75)',
 				extraStyles: `
 .desktop-style div.boardlist:not(.bottom), .boardlist:hover {
   opacity: 1;
