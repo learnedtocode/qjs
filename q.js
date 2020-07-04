@@ -42,7 +42,7 @@ window.qjsSettings = {
 		floodBehavior: 'fade', // hide, fade
 		fadenametripregex: /^(Anon(ymous)?-.*|.*-!!Hs1Jq13jV6)$/i,
 		fadenametripfloodvalue: -1, // Effective post count for fading, or -1 for auto of floodThreshold+post count
-		strikeThroughNameFags: true,
+		strikeThroughNameFags: false, // doesn't work well with other boards!
 
 		rateHistoryLen: 50, // Data points on chart
 		rateAvgLen: 10, // Number of data points to average for instantaneous rate
