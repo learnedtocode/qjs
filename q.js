@@ -279,6 +279,7 @@ jQuery(function($) {
 			$('#quick-reply textarea[name=body]').attr('id', 'body');
 			var textarea = document.getElementById('body');
 			var toInsert = '>>' + id + '\n';
+			// 8kun code sets this to window.getSelection().toString()
 			var selectedText = sessionStorage.quoteClipboard;
 			if (selectedText) {
 				toInsert += selectedText
@@ -287,7 +288,9 @@ jQuery(function($) {
 						if (line !== '') {
 							return '>' + line + '\n';
 						} else {
-							return '\n';
+							// No way to tell the difference between real empty
+							// lines and end of paragraph, so skip them
+							return '';
 						}
 					})
 					.join('');
