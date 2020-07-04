@@ -72,7 +72,7 @@ window.qjsSettings = {
   background: rgb(195,225,255) !important;
   color: #cc0000 !important;
 }
-#qjs_overlay {
+.qjs-overlay {
   color: #cc3333;
 }
 				`,
@@ -92,6 +92,7 @@ window.qjsSettings = {
 	var curryou = -1;
 	var qnavposts = [];
 	var younavposts = [];
+	var postIdsByIndex = {};
 	var ctx;
 	var borderSz;
 	var minheight;
@@ -211,6 +212,7 @@ window.qjsSettings = {
 					+ '<span class="qjs-blacklist-count"></span>'
 					+ '</div>'
 				);
+				postIdsByIndex[i] = el.id;
 				el.classList.add('qjs-processed-controls');
 			}
 		});
@@ -517,10 +519,10 @@ span.qjs-pastebin a {
 .disclaimer-8kun {
 	display: none;
 }
-#qjs_overlay {
+.qjs-overlay {
 	position: fixed;
-	top: 35px;
-	right: 35px;
+	top: 36px;
+	right: ${getSetting('sidenavWidth') + 6}px;
 	opacity: 0.45;
 	color: #f60;
 	font-family: sans-serif;
@@ -530,6 +532,9 @@ span.qjs-pastebin a {
 #qjs_post_count {
 	font-size: 36px;
 }
+#sidenav {
+	cursor: pointer;
+}
 
 /* Extra styles */
 ${getSetting('extraStyles')}
@@ -538,15 +543,16 @@ ${getSetting('extraStyles')}
 
 	/* Display a replies counter overlay in the top right corner */
 	$('body').append(
-		'<div id="qjs_overlay">'
+		'<div id="qjs_overlay_main" class="qjs-overlay">'
 		+ '<div id="qjs_post_count" />'
 		+ '<div id="qjs_my_posts" />'
 		+ '</div>'
 	);
 	var updatePostCountDelay = 30;
 	function updatePostCount() {
-		var postCount = $('#thread_stats_posts').text();
+		postCount = $('#thread_stats_posts').text();
 		if (postCount) {
+			postCount = +postCount;
 			$('#qjs_post_count').text(postCount);
 		} else {
 			// waiting for 8kun code?
@@ -721,6 +727,29 @@ ${getSetting('extraStyles')}
 		ctx.canvas.height = 2048;
 		ctx.canvas.width = getSetting('sidenavWidth');
 		borderSz = 1;
+
+		var $navTooltip = null;
+		var hoverPostNumber = 0;
+		function updateTooltip(e) {
+			hoverPostNumber = Math.round(postCount * e.offsetY / nav.height());
+			$navTooltip
+				.css('top', Math.max(e.clientY - 6, 78) + 'px')
+				.html('&rarr; #' + hoverPostNumber);
+		}
+		nav.on('mouseenter', function(e) {
+			$navTooltip = $('<div class="qjs-overlay">')
+				.css('font-weight', 'bold')
+				.css('opacity', '1')
+				.appendTo('body');
+			updateTooltip(e);
+		}).on('mousemove', function(e) {
+			updateTooltip(e);
+		}).on('mouseleave', function() {
+			$navTooltip.remove();
+			$navTooltip = null;
+		}).on('click', function(e) {
+			$(window).scrollTop($('#' + postIdsByIndex[hoverPostNumber]).offset().top - 36);
+		});
 	}
 
 	// Update nav when scrolling stops
