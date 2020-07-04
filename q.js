@@ -517,7 +517,7 @@ span.qjs-pastebin a {
 	display: none;
 }
 .disclaimer-8kun {
-	display: none;
+	display: none !important;
 }
 .qjs-overlay {
 	position: fixed;
