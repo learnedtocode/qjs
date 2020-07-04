@@ -396,8 +396,16 @@ span.qjs-pastebin a {
 		+ '<div id="qjs_my_posts" />'
 		+ '</div>'
 	);
+	var updatePostCountDelay = 30;
 	function updatePostCount() {
-		$('#qjs_post_count').text($('#thread_stats_posts').text());
+		var postCount = $('#thread_stats_posts').text();
+		if (postCount) {
+			$('#qjs_post_count').text(postCount);
+		} else {
+			// waiting for 8kun code?
+			setTimeout(updatePostCount, updatePostCountDelay);
+			updatePostCountDelay *= 1.5;
+		}
 	}
 	$(document).on('new_post', updatePostCount);
 	updatePostCount();
@@ -1073,5 +1081,6 @@ span.qjs-pastebin a {
 	}( window.anonsw_main = window.anonsw_main || {}, jQuery ));
 
 	// Attach snippets to ready/change events
-	anonsw_main.Q();
+	// Wait for 8kun code that adds (you)s to run
+	setTimeout(anonsw_main.Q, 30);
 });
