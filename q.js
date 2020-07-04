@@ -553,7 +553,6 @@ ${getSetting('extraStyles')}
 		var younavposts = [];
 		var ctx;
 		var	borderSz;
-		var	scrollWd;
 		var minheight;
 		var ratehistory = [];
 		var floodEnabled = getSetting('floodEnabled');
@@ -722,7 +721,6 @@ ${getSetting('extraStyles')}
 			ctx.canvas.height = 2048;
 			ctx.canvas.width = getSetting('sidenavWidth');
 			borderSz = 1;
-			scrollWd = ctx.canvas.width / 2;
 		}
 
 		// Update nav when scrolling stops
@@ -1030,7 +1028,7 @@ ${getSetting('extraStyles')}
 
 				// Draw nav you posts
 				younavposts = [];
-				ctx.fillStyle = getSetting('youcolor');
+				ctx.fillStyle = getSetting('youscrollcolor') || getSetting('youcolor');
 				for (i = 0; i < youposts.length; i++) {
 					// TODO: check if we have already added post, don't add it again
 					var el = $(youposts).get(i);
@@ -1047,16 +1045,29 @@ ${getSetting('extraStyles')}
 
 				// Update nav window
 				ctx.fillStyle = getSetting('scrollcolor');
+				var heightScale = ctx.canvas.height / $(document).height(),
+					scrollStart = $(window).scrollTop() * heightScale,
+					scrollHeight = $(window).height() * heightScale,
+					scrollMinHeight = getSetting('scrollminheight') * ctx.canvas.height / $(window).height();
+				if (scrollHeight < scrollMinHeight) {
+					scrollStart -= (scrollMinHeight - scrollHeight) / 4;
+					scrollHeight += (scrollMinHeight - scrollHeight) * 3 / 4;
+					if (scrollStart < 0) {
+						scrollStart = 0;
+					} else if (scrollStart + scrollHeight > ctx.canvas.height) {
+						scrollStart = ctx.canvas.height - scrollHeight;
+					}
+				}
 				ctx.fillRect(
-					scrollWd / 2,
-					$(window).scrollTop() / $(document).height() * ctx.canvas.height,
-					scrollWd,
-					$(window).height() / $(document).height() * ctx.canvas.height
+					ctx.canvas.width / 4,
+					scrollStart,
+					ctx.canvas.width / 2,
+					scrollHeight
 				);
 
 				// Add red marker at bottom of >750 posts
 				if($('#thread_stats_posts').text() > 750) {
-					var barHeight = (4 * 2048) / ($(window).height() - $('div.boardlist').height());
+					var barHeight = (4 * ctx.canvas.height) / ($(window).height() - $('div.boardlist').height());
 					ctx.fillStyle = '#f66';
 					ctx.fillRect(
 						0,
