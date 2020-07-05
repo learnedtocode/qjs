@@ -739,14 +739,33 @@ ${getSetting('extraStyles')}
 		borderSz = 1;
 
 		var $navTooltip = null;
-		var hoverPostNumber = 0;
+		var postOffsets = [];
+		// https://stackoverflow.com/a/41956372
+		function binarySearch(array, pred) {
+			let lo = -1, hi = array.length;
+			while (1 + lo < hi) {
+				const mi = lo + ((hi - lo) >> 1);
+				if (pred(array[mi])) {
+					hi = mi;
+				} else {
+					lo = mi;
+				}
+			}
+			return hi;
+		}
 		function updateTooltip(e) {
-			hoverPostNumber = Math.round(postCount * e.offsetY / nav.height());
+			hoverPostNumber = Math.max(binarySearch(postOffsets, function(o) {
+				return o > e.offsetY * navScaleFactor;
+			}) - 1, 0);
 			$navTooltip
-				.css('top', Math.max(e.clientY - 6, 78) + 'px')
+				.css('top', Math.min($(window).height() - 18, Math.max(e.clientY - 6, 78)) + 'px')
 				.html('&rarr; #' + hoverPostNumber);
 		}
 		nav.on('mouseenter', function(e) {
+			var docHeight = $(document).height();
+			postOffsets = $allPosts.map(function() {
+				return $(this).offset().top * ctx.canvas.height / docHeight;
+			});
 			$navTooltip = $('<div class="qjs-overlay">')
 				.css('font-weight', 'bold')
 				.css('opacity', '1')
