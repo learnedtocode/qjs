@@ -29,7 +29,8 @@ window.qjsSettings = {
 		qcolor: '#99d6ff',
 		youcolor: '#F3D74D',
 		scrollcolor: 'rgba(255, 255, 255, 0.9)',
-		scrollminheight: 12,
+		scrollcolor2: 'rgba(255, 255, 255, 0.6)', // may enlarge scroll bar for visibility
+		scrollminheight: 9,
 		scrollbackcolor: '#333',
 		offbreadcolor: '#ffb', // background for posts in other breads
 		scrolltime: 0, // ms
@@ -108,6 +109,7 @@ span.qjs-pastebin a {
 	var ratehistory = [];
 	var floodEnabled = getSetting('floodEnabled');
 	var postCount = 0;
+	var navScaleFactor = 3;
 
 	function getSetting(name) {
 		var s = window.qjsSettings;
@@ -732,9 +734,8 @@ ${getSetting('extraStyles')}
 		$(nav).css('background-color', getSetting('scrollbackcolor'));
 		$('body').css('margin-right', getSetting('sidenavWidth'));
 		ctx = $('#sidenav').get(0).getContext('2d');
-		//ctx.canvas.height = $(document).height() - $('div.boardlist').height();
-		ctx.canvas.height = 2048;
-		ctx.canvas.width = getSetting('sidenavWidth');
+		ctx.canvas.height = ($(window).height() - $('div.boardlist').height()) * navScaleFactor;
+		ctx.canvas.width = getSetting('sidenavWidth') * navScaleFactor;
 		borderSz = 1;
 
 		var $navTooltip = null;
@@ -1082,20 +1083,26 @@ ${getSetting('extraStyles')}
 			}
 
 			// Update nav window
-			ctx.fillStyle = getSetting('scrollcolor');
 			var heightScale = ctx.canvas.height / $(document).height(),
 				scrollStart = $(window).scrollTop() * heightScale,
 				scrollHeight = $(window).height() * heightScale,
 				scrollMinHeight = getSetting('scrollminheight') * ctx.canvas.height / $(window).height();
 			if (scrollHeight < scrollMinHeight) {
-				scrollStart -= (scrollMinHeight - scrollHeight) / 4;
-				scrollHeight += (scrollMinHeight - scrollHeight) * 3 / 4;
-				if (scrollStart < 0) {
-					scrollStart = 0;
-				} else if (scrollStart + scrollHeight > ctx.canvas.height) {
-					scrollStart = ctx.canvas.height - scrollHeight;
+				var scrollStart2 = scrollStart - (scrollMinHeight - scrollHeight) / 2;
+				if (scrollStart2 < 0) {
+					scrollStart2 = 0;
+				} else if (scrollStart2 + scrollMinHeight > ctx.canvas.height) {
+					scrollStart2 = ctx.canvas.height - scrollMinHeight;
 				}
+				ctx.fillStyle = getSetting('scrollcolor2');
+				ctx.fillRect(
+					ctx.canvas.width / 4,
+					scrollStart2,
+					ctx.canvas.width / 2,
+					scrollMinHeight
+				);
 			}
+			ctx.fillStyle = getSetting('scrollcolor');
 			ctx.fillRect(
 				ctx.canvas.width / 4,
 				scrollStart,
