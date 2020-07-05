@@ -110,6 +110,7 @@ span.qjs-pastebin a {
 	var floodEnabled = getSetting('floodEnabled');
 	var postCount = 0;
 	var navScaleFactor = 3;
+	var isCyclical = $('.post.op .fa.fa-refresh').length > 0;
 
 	function getSetting(name) {
 		var s = window.qjsSettings;
@@ -1130,7 +1131,7 @@ ${getSetting('extraStyles')}
 			);
 
 			// Add red marker at bottom of >750 posts
-			if($('#thread_stats_posts').text() > 750) {
+			if($('#thread_stats_posts').text() > 750 && !isCyclical) {
 				var barHeight = (4 * ctx.canvas.height) / ($(window).height() - $('div.boardlist').height());
 				ctx.fillStyle = '#f66';
 				ctx.fillRect(
