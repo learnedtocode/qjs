@@ -31,6 +31,7 @@ window.qjsSettings = {
 		scrollcolor: 'rgba(255, 255, 255, 0.9)',
 		scrollminheight: 12,
 		scrollbackcolor: '#333',
+		offbreadcolor: '#ffb', // background for posts in other breads
 		scrolltime: 0, // ms
 		// youscrollcolor: (same as 'youcolor' by default),
 		updateDelay: 30, // ms
@@ -53,12 +54,20 @@ window.qjsSettings = {
 			qrb: {
 				youcolor: '#2a3a4a',
 				youscrollcolor: '#4a6376',
+				offbreadcolor: '#480000',
 				extraStyles: `
 .post > div.qjs-controls a {
   color: #ddaadd;
 }
 .body small {
   color: #339955;
+}
+span.qjs-pastebin {
+  color: #c5c8c6;
+  border-color: rgba(197, 200, 198, 0.6);
+}
+span.qjs-pastebin a {
+  color: #f33 !important;
 }
 `,
 			},
@@ -477,7 +486,7 @@ span.post-num {
 	font-size: 81%;
 }
 a[href^="/${boardName}/res/"]:not([href^="/${boardName}/res/${opPostId}.html"]):not([href*="+50.html"]) {
-	background: #ffb;
+	background: ${getSetting('offbreadcolor')};
 }
 span.qjs-pastebin {
 	font-size: 81%;
