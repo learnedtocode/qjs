@@ -572,7 +572,9 @@ ${getSetting('extraStyles')}
 			updatePostCountDelay *= 1.5;
 		}
 	}
-	$(document).on('new_post', updatePostCount);
+	$(document).on('new_post', function() {
+		setTimeout(updatePostCount, 30);
+	});
 	updatePostCount();
 
 	// On scroll stop. SO #9144560
