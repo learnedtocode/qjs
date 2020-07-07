@@ -224,7 +224,8 @@ span.qjs-pastebin a {
 					+ '<span class="qjs-blacklist-count"></span>'
 					+ '</div>'
 				);
-				postIdsByIndex[i] = el.id;
+				// see: "Don't scroll to my own new posts" section below
+				postIdsByIndex[i] = el.id.replace(/^disabled_/, '');
 				el.classList.add('qjs-processed-controls');
 			}
 		});
@@ -726,18 +727,30 @@ ${getSetting('extraStyles')}
 	}
 
 	// Inserts side navigation (bird's eye)
+	var sideNavKey = null;
 	function sidenav() {
+		var winHeight = $(window).height();
+		var boardlistHeight = $('div.boardlist').height();
+		var sideNavKeyNew = [winHeight, boardlistHeight].join(',');
+		if (sideNavKey === sideNavKeyNew) {
+			return; // No size change, so need to do anything now
+		}
+		sideNavKey = sideNavKeyNew;
+
+		var $nav = $('#sidenav');
+		if ($nav.length) $nav.remove();
 		$('body').append('<canvas id="sidenav"></canvas>');
-		var nav = $('#sidenav');
-		$(nav).css('position', 'fixed');
-		$(nav).css('top', $('div.boardlist').height());
-		$(nav).css('right', 0);
-		$(nav).css('width', getSetting('sidenavWidth'));
-		$(nav).css('height', $(window).height() - $('div.boardlist').height());
-		$(nav).css('background-color', getSetting('scrollbackcolor'));
+		$nav = $('#sidenav');
+		$nav.css('position', 'fixed');
+		$nav.css('top', $('div.boardlist').height());
+		$nav.css('right', 0);
+		$nav.css('width', getSetting('sidenavWidth'));
+		$nav.css('height', $(window).height() - $('div.boardlist').height());
+		$nav.css('background-color', getSetting('scrollbackcolor'));
 		$('body').css('margin-right', getSetting('sidenavWidth'));
 		ctx = $('#sidenav').get(0).getContext('2d');
-		ctx.canvas.height = ($(window).height() - $('div.boardlist').height()) * navScaleFactor;
+		var canvasHeight = $(window).height() - $('div.boardlist').height();
+		ctx.canvas.height = canvasHeight * navScaleFactor;
 		ctx.canvas.width = getSetting('sidenavWidth') * navScaleFactor;
 		borderSz = 1;
 
@@ -758,16 +771,16 @@ ${getSetting('extraStyles')}
 		}
 		function updateTooltip(e) {
 			hoverPostNumber = Math.max(binarySearch(postOffsets, function(o) {
-				return o > e.offsetY * navScaleFactor;
+				return o > e.offsetY;
 			}) - 1, 0);
 			$navTooltip
 				.css('top', Math.min($(window).height() - 18, Math.max(e.clientY - 6, 78)) + 'px')
 				.html('&rarr; #' + hoverPostNumber);
 		}
-		nav.on('mouseenter', function(e) {
+		$nav.on('mouseenter', function(e) {
 			var docHeight = $(document).height();
 			postOffsets = $allPosts.map(function() {
-				return $(this).offset().top * ctx.canvas.height / docHeight;
+				return $(this).offset().top / docHeight * canvasHeight;
 			});
 			$navTooltip = $('<div class="qjs-overlay">')
 				.css('font-weight', 'bold')
@@ -782,6 +795,7 @@ ${getSetting('extraStyles')}
 		}).on('click', function(e) {
 			$(window).scrollTop($('#' + postIdsByIndex[hoverPostNumber]).offset().top - 36);
 		});
+		updateNav();
 	}
 
 	// Update nav when scrolling stops
@@ -792,8 +806,10 @@ ${getSetting('extraStyles')}
 
 	// Update nav when resize stops
 	$(window).on('resize', function(e) {
-		updateNav();
+		setTimeout(sidenav, 300); // why long timeout needed?
 	}, getSetting('updateDelay'));
+	setInterval(sidenav, 3000); // and why is this needed?
+	// but it fixes problems with the post #/offset calculation
 
 	// Toggle post flooding
 	qjs_main.toggleFlood = function() {
