@@ -247,6 +247,48 @@ span.qjs-pastebin a {
 		});
 	}
 
+	function addPostNumberSpaces() {
+		function addPostNumberSpacesForElement(el, isMention) {
+			var $el = $(el);
+			var postNumber = $el.text();
+			var pieces = [];
+			var prefix = postNumber.replace(/\d+$/, '');
+			var numbersOnly = postNumber.substring(prefix.length);
+			if (!numbersOnly) {
+				// may be a link directly to a board like >>>/abcu/ - ignore
+				return;
+			}
+			while (numbersOnly.length % 3 !== 0) numbersOnly = ' ' + numbersOnly;
+			for (var i = 0; i < numbersOnly.length / 3; i++) {
+				pieces.push(numbersOnly.substring(i * 3, i * 3 + 3).trim());
+			}
+			if (prefix) {
+				pieces[0] = prefix + pieces[0];
+			}
+			var tagOpen = '<span class="qjs-postnum-part">';
+			var tagClose = '</span>';
+			$el.html(tagOpen + pieces.join(tagClose + tagOpen) + tagClose);
+			if (isMention) {
+				$el.addClass('qjs-processed-postnums');
+			}
+		}
+		$allPosts.filter(':not(.qjs-processed-postnums)').each(function() {
+			var sels = [
+				'.post_no:not([id^="post_no"])',
+				'.body-line a[onclick^="highlightReply("]',
+				'.body-line a[href^="/"]',
+			];
+			$(this).find(sels.join(', ')).each(function() {
+				addPostNumberSpacesForElement(this);
+			});
+			this.classList.add('qjs-processed-postnums');
+		});
+		// Process quoted posts that appear during an update
+		$allPosts.find('.mentioned > a:not(.qjs-processed-postnums)').each(function() {
+			addPostNumberSpacesForElement(this, true);
+		});
+	}
+
 	function fixAutoUpdates() {
 		if ($allPosts.length < 700) {
 			return;
@@ -548,6 +590,12 @@ span.qjs-pastebin a {
 #sidenav {
 	cursor: pointer;
 }
+.qjs-postnum-part {
+  padding-right: 0.15em;
+}
+.qjs-postnum-part:last-child {
+  padding-right: 0;
+}
 
 /* Extra styles */
 ${getSetting('extraStyles')}
@@ -845,6 +893,7 @@ ${getSetting('extraStyles')}
 		// Added here later (newsbaker)
 		addPostControls();
 		removeBlacklistedImages();
+		addPostNumberSpaces();
 		fixAutoUpdates();
 	}
 
