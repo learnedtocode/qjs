@@ -293,6 +293,13 @@ span.qjs-pastebin a {
 		});
 	}
 
+	function fixPostFlags() {
+		$allPosts.filter(':not(.qjs-processed-flags)').each(function() {
+			$('img.flag[src$="/undefined.png"]', this).remove();
+			this.classList.add('qjs-processed-flags');
+		});
+	}
+
 	function fixAutoUpdates() {
 		if ($allPosts.length < 700) {
 			return;
@@ -902,6 +909,7 @@ ${getSetting('extraStyles')}
 		removeBlacklistedImages();
 		addPostNumberSpaces();
 		fixAutoUpdates();
+		fixPostFlags();
 	}
 
 	// Try to look up pastebin author(s)
