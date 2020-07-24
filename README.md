@@ -4,7 +4,7 @@ This is a user script for https://8kun.top that adds features and fixes a bunch 
 
 Based on the [original "q.js v2018.3-6.1" code](https://duckduckgo.com/?q=q.js+v2018.3-6.1) which has mostly disappeared but had the following features:
 
-- A scroll bar on the right that shows your posts and replies to your posts in yellow, and Q's posts in blue
+- A scroll bar on the right that shows an overview of the whole thread, with your posts and replies to your posts in yellow, and Q's posts in blue
 - Navigate between your posts/replies to your posts and between Q posts with arrow buttons
 - Post fading based on post counts (fade out very active posters)
 - Simple image blacklist
@@ -20,8 +20,12 @@ This script keeps all of those features and adds some more:
 - Add spaces between 3-digit groupings in post numbers to make them easier to read
 - Fix broken images in the "flags" section of a post when you make a new post
 - Show author info for qanonbin pastes in the thread
+- Better default settings for other boards like /qrb/
 - Better settings system (see "Settings" below)
-- **__SOON__** Better post filtering system
+
+More features planned to implement soon:
+
+- Better post filtering system - select text and click "filter" to add a filter
 
 ### How to install this
 
@@ -70,4 +74,4 @@ window.qjsSettings = {
 
 It's better to change the settings this way, WITHOUT modifying this script's code, because that way it's easier for you to update to new versions of the script later!
 
-If there's a feature that you'd like to disable let us know in the [issues]() or on the [8kun thread for this project]() and we'll add a setting to let you disable it.
+If there's a feature that you'd like to disable let us know in the [issues](https://github.com/learnedtocode/qjs/issues) or on the [8kun thread for this project](https://8kun.top/comms/res/21036.html) and we'll add a setting to let you disable it.
