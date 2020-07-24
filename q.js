@@ -1,29 +1,8 @@
+// BEGIN Q.JS CODE
+// MODIFICATIONS BELOW THIS LINE NOT RECOMMENDED!
+// SEE https://github.com/learnedtocode/qjs
+// for instructions on modifying this script's behavior without modifying its code!
 jQuery(function($) {
-	// User Settings
-	// To override some or all of these settings you can set them in the 8kun
-	// "Options > User JS" box like this:
-	/*
-
-window.qjsSettings = {
-  youcolor: '#ffffbb',
-};
-
-// You can also override settings for specific boards:
-
-window.qjsSettings = {
-  youcolor: '#ffffbb',
-  boards: {
-    qrb: {
-      youcolor: '#334455',
-    },
-  },
-};
-
-	*/
-	// It's better to change the settings this way, WITHOUT modifying this
-	// script's code, because that way it's easier to update to new versions
-	// later!
-
 	var defaultSettings = {
 		qflair: '', // Examples: REAL, &rarr;
 		qcolor: '#99d6ff',
@@ -897,14 +876,14 @@ ${getSetting('extraStyles')}
 	function runq() {
 		$allPosts = $('div.post:not(.post-hover):not(.hidden)');
 
-		processPastebins(); // Added later (newsbaker)
+		processPastebins(); // Added later (learnedtocode)
 		setQPosts();
 		removeInvalidYous();
 		setYouPosts();
 		setFloodPosts();
 		updateNav();
 
-		// Added here later (newsbaker)
+		// Added here later (learnedtocode)
 		addPostControls();
 		removeBlacklistedImages();
 		addPostNumberSpaces();
