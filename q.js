@@ -228,7 +228,7 @@ span.qjs-pastebin a {
 					+ '</div>'
 				);
 				// see: "Don't scroll to my own new posts" section below
-				postIdsByIndex[i] = el.id.replace(/^disabled_/, '');
+				postIdsByIndex[i] = el.id.replace(/^(disabled_)/, '');
 				el.classList.add('qjs-processed-controls');
 			}
 		});
