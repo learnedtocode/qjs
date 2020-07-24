@@ -33,6 +33,8 @@ window.qjsSettings = {
 		scrollminheight: 9,
 		scrollbackcolor: '#333',
 		offbreadcolor: '#ffb', // background for posts in other breads
+		// background for the current post link when showing a quoted post via hover
+		quotehovercolor: '#ebf',
 		scrolltime: 0, // ms
 		// youscrollcolor: (same as 'youcolor' by default),
 		updateDelay: 30, // ms
@@ -56,6 +58,7 @@ window.qjsSettings = {
 				youcolor: '#2a3a4a',
 				youscrollcolor: '#4a6376',
 				offbreadcolor: '#480000',
+				quotehovercolor: '#705',
 				extraStyles: `
 .post > div.qjs-controls a {
   color: #ddaadd;
@@ -533,6 +536,9 @@ span.post-num {
 }
 a[href^="/${boardName}/res/"]:not([href^="/${boardName}/res/${opPostId}.html"]):not([href*="+50.html"]) {
 	background: ${getSetting('offbreadcolor')};
+}
+a.dashed-underline {
+	background: ${getSetting('quotehovercolor')};
 }
 span.qjs-pastebin {
 	font-size: 81%;
