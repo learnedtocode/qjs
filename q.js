@@ -893,6 +893,7 @@ ${getSetting('extraStyles')}
 
 	// Try to look up pastebin author(s)
 	function processPastebins() {
+		if (!getSetting('pastebin_key')) return;
 		$allPosts.filter(':not(.qjs-processed-pastebin)').each(function() {
 			if (/pastebin\.com/.test(this.textContent)) {
 				$('p.body-line', this).each(function() {
@@ -924,7 +925,7 @@ ${getSetting('extraStyles')}
 								);
 							}
 							$.ajax({
-								url: 'https://wearethene.ws/api/dough?v=3&paste_id=' + pastebinId,
+								url: 'https://wearethene.ws/api/dough?v=3&paste_id=' + pastebinId + '&key=' + encodeURIComponent(getSetting('pastebin_key')),
 								success: function(data) {
 									pbDone(data);
 								},
