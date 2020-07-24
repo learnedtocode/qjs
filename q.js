@@ -535,8 +535,6 @@ span.qjs-pastebin {
 	border: 1px solid rgb(0, 0, 0, 0.6);
 	border-radius: 3px;
 	padding: 1px 2px;
-	-moz-user-select: none;
-	user-select: none;
 }
 span.qjs-pastebin a {
 	color: #900 !important;
@@ -877,6 +875,7 @@ ${getSetting('extraStyles')}
 		$allPosts = $('div.post:not(.post-hover):not(.hidden)');
 
 		processPastebins(); // Added later (learnedtocode)
+		processQanonbins(); // Added later (learnedtocode)
 		setQPosts();
 		removeInvalidYous();
 		setYouPosts();
@@ -941,6 +940,53 @@ ${getSetting('extraStyles')}
 				});
 			}
 			this.classList.add('qjs-processed-pastebin');
+		});
+	}
+
+	// Try to look up qanonbin author(s)
+	function processQanonbins() {
+		$allPosts.filter(':not(.qjs-processed-qanonbin)').each(function() {
+			if (/qanonbin\.com/.test(this.textContent)) {
+				$('p.body-line', this).each(function() {
+					// qanonbin URL length is 41, allow a few more chars for "dough:" etc
+					if (!this.textContent || this.textContent.length > 60) return;
+					var binUrl = (this.textContent || '')
+						.match(/(https?:\/\/[a-z\.]*qanonbin\.com\/(paste|clone)\/[a-zA-Z0-9]{9})\b/);
+					if (!binUrl) return;
+					binUrl = binUrl[1];
+					var binId = binUrl.substring(binUrl.length - 9);
+					var bodyLine = this;
+					function pbDone(data) {
+						var msg;
+						if (data.error) {
+							msg = 'ERROR: ' + data.error;
+						} else {
+							msg = data.info;
+						}
+						$(bodyLine).append(
+							'<span class="qjs-pastebin">'
+							+ '<a href="' + binUrl + '" target="_blank" rel="noopener noreferer">'
+							+ ':qanonbin'
+							+ '</a> '
+							+ msg
+							+ '</span>'
+						);
+					}
+					$.ajax({
+						url: 'https://www2.qanonbin.com/api/info/' + binId,
+						success: function(data) {
+							pbDone(data);
+						},
+						error: function(xhr, textStatus, errorThrown) {
+							pbDone({
+								error: errorThrown || textStatus || 'unknown',
+							});
+						},
+						dataType: 'json',
+					});
+				});
+			}
+			this.classList.add('qjs-processed-qanonbin');
 		});
 	}
 
