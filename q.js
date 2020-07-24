@@ -67,7 +67,7 @@ span.qjs-pastebin a {
 .qjs-overlay {
   color: #cc3333;
 }
-				`,
+`,
 			},
 		},
 	};
@@ -99,11 +99,11 @@ span.qjs-pastebin a {
 		if (s && s.boards && boardName && s.boards[boardName] && name in s.boards[boardName]) {
 			return s.boards[boardName][name];
 		}
-		if (s && name in s) {
-			return s[name];
-		}
 		if (boardName && defaultSettings.boards[boardName] && name in defaultSettings.boards[boardName]) {
 			return defaultSettings.boards[boardName][name];
+		}
+		if (s && name in s) {
+			return s[name];
 		}
 		return defaultSettings[name];
 	}
