@@ -250,31 +250,32 @@ span.qjs-pastebin a {
 		});
 	}
 
-	function addPostNumberSpaces() {
-		function addPostNumberSpacesForElement(el, isMention) {
-			var $el = $(el);
-			var postNumber = $el.text();
-			var pieces = [];
-			var prefix = postNumber.replace(/\d+$/, '');
-			var numbersOnly = postNumber.substring(prefix.length);
-			if (!numbersOnly) {
-				// may be a link directly to a board like >>>/abcu/ - ignore
-				return;
-			}
-			while (numbersOnly.length % 3 !== 0) numbersOnly = ' ' + numbersOnly;
-			for (var i = 0; i < numbersOnly.length / 3; i++) {
-				pieces.push(numbersOnly.substring(i * 3, i * 3 + 3).trim());
-			}
-			if (prefix) {
-				pieces[0] = prefix + pieces[0];
-			}
-			var tagOpen = '<span class="qjs-postnum-part">';
-			var tagClose = '</span>';
-			$el.html(tagOpen + pieces.join(tagClose + tagOpen) + tagClose);
-			if (isMention) {
-				$el.addClass('qjs-processed-postnums');
-			}
+	function addPostNumberSpacesForElement(el, isMention) {
+		var $el = $(el);
+		var postNumber = $el.text();
+		var pieces = [];
+		var prefix = postNumber.replace(/\d+$/, '');
+		var numbersOnly = postNumber.substring(prefix.length);
+		if (!numbersOnly) {
+			// may be a link directly to a board like >>>/abcu/ - ignore
+			return;
 		}
+		while (numbersOnly.length % 3 !== 0) numbersOnly = ' ' + numbersOnly;
+		for (var i = 0; i < numbersOnly.length / 3; i++) {
+			pieces.push(numbersOnly.substring(i * 3, i * 3 + 3).trim());
+		}
+		if (prefix) {
+			pieces[0] = prefix + pieces[0];
+		}
+		var tagOpen = '<span class="qjs-postnum-part">';
+		var tagClose = '</span>';
+		$el.html(tagOpen + pieces.join(tagClose + tagOpen) + tagClose);
+		if (isMention) {
+			$el.addClass('qjs-processed-postnums');
+		}
+	}
+
+	function addPostNumberSpaces() {
 		$allPosts.filter(':not(.qjs-processed-postnums)').each(function() {
 			var sels = [
 				'.post_no:not([id^="post_no"])',
@@ -402,12 +403,12 @@ span.qjs-pastebin a {
 			var $myPost = $('<div class="qjs_my_post">')
 				.data('created', Date.now())
 				.data('expires', Date.now() + 60000);
-			$myPost.append(
-				$('<a>')
-					.text('>>' + id)
-					.attr('href', '#' + id)
-					.attr('onclick', 'highlightReply(' + JSON.stringify(id) + ', event)')
-			);
+			var $newPostIndicator = $('<a>')
+				.text('>>' + id)
+				.attr('href', '#' + id)
+				.attr('onclick', 'highlightReply(' + JSON.stringify(id) + ', event)')
+			$myPost.append($newPostIndicator);
+			addPostNumberSpacesForElement($newPostIndicator);
 			$myPost.append(
 				$('<span>')
 					.text(' ' + $post.find('time').text().trim().split(' ')[2])
