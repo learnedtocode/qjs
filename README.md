@@ -30,6 +30,7 @@ More features planned to implement soon:
 - Better post filtering system - select text and click "filter" to add a filter
 - Make links clickable again in /qresearch/
 - Fix/improve the post rate graph
+- Click a user ID to highlight all posts by that ID
 
 ### How to install this
 
