@@ -13,6 +13,7 @@ Based on the [original "q.js v2018.3-6.1" code](https://duckduckgo.com/?q=q.js+v
 This script keeps all of those features and adds some more:
 
 - Add post numbers like `[#123]` (the 123rd reply in the thread) to every post
+- Mark lb/pb posts with a different background color (light yellow by default)
 - Click anywhere in the scroll bar to jump to that post
 - Better image blacklist - click the "hide" link above a post to collapse it and never show any of the images in that post again
 - Fix 8kun auto-updates when a thread is getting towards the end
@@ -26,6 +27,8 @@ This script keeps all of those features and adds some more:
 More features planned to implement soon:
 
 - Better post filtering system - select text and click "filter" to add a filter
+- Make links clickable again in /qresearch/
+- Fix/improve the post rate graph
 
 ### How to install this
 
