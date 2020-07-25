@@ -896,47 +896,48 @@ ${getSetting('extraStyles')}
 		$allPosts.filter(':not(.qjs-processed-pastebin)').each(function() {
 			if (/pastebin\.com/.test(this.textContent)) {
 				$('p.body-line', this).each(function() {
-					if (this.textContent.length < 45) {
-						// Pastebin URL length is 29, allow a few more chars for "dough:" etc
-						var pastebinId = (this.textContent || '')
-							.match(/pastebin\.com\/([a-zA-Z0-9]{8})\b/);
-						pastebinId = pastebinId ? pastebinId[1] : null;
-						if (pastebinId) {
-							var bodyLine = this;
-							function pbDone(data) {
-								var msg;
-								if (data.error) {
-									msg = 'ERROR: ' + data.error;
-								} else if (data.anonymous) {
-									msg = 'anonymous';
-								} else {
-									msg = (
-										'<a href="https://pastebin.com/u/' + data.username
-										+ '" target="_blank" rel="noopener noreferer">'
-										+ '/u/' + data.username
-										+ '</a>'
-									);
-								}
-								$(bodyLine).append(
-									'<span class="qjs-pastebin">'
-									+ ':pastebin ' + msg
-									+ '</span>'
-								);
-							}
-							$.ajax({
-								url: 'https://wearethene.ws/api/dough?v=3&paste_id=' + pastebinId + '&key=' + encodeURIComponent(getSetting('pastebin_key')),
-								success: function(data) {
-									pbDone(data);
-								},
-								error: function(xhr, textStatus, errorThrown) {
-									pbDone({
-										error: errorThrown || textStatus || 'unknown',
-									});
-								},
-								dataType: 'json',
-							});
+					// Pastebin URL length is 29, allow a few more chars for "dough:" etc
+					if (this.textContent.length > 45) return;
+					var binUrl = (this.textContent || '')
+						.match(/(https?:\/\/pastebin\.com\/[a-zA-Z0-9]{8})\b/);
+					if (!binUrl) return;
+					binUrl = binUrl[1];
+					var binId = binUrl.substring(binUrl.length - 8);
+					var bodyLine = this;
+					function pbDone(data) {
+						var msg;
+						if (data.error) {
+							msg = 'ERROR: ' + data.error;
+						} else if (data.anonymous) {
+							msg = 'anonymous';
+						} else {
+							msg = (
+								'<a href="https://pastebin.com/u/' + data.username
+								+ '" target="_blank" rel="noopener noreferer">'
+								+ '/u/' + data.username
+								+ '</a>'
+							);
 						}
+						$(bodyLine).append(
+							'<span class="qjs-pastebin">'
+							+ '<a href="' + binUrl + '" target="_blank" rel="noopener noreferer">'
+							+ ':pastebin'
+							+ '</a> ' + msg
+							+ '</span>'
+						);
 					}
+					$.ajax({
+						url: 'https://wearethene.ws/api/dough?v=3&paste_id=' + binId + '&key=' + encodeURIComponent(getSetting('pastebin_key')),
+						success: function(data) {
+							pbDone(data);
+						},
+						error: function(xhr, textStatus, errorThrown) {
+							pbDone({
+								error: errorThrown || textStatus || 'unknown',
+							});
+						},
+						dataType: 'json',
+					});
 				});
 			}
 			this.classList.add('qjs-processed-pastebin');
