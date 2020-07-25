@@ -951,7 +951,7 @@ ${getSetting('extraStyles')}
 					// qanonbin URL length is 41, allow a few more chars for "dough:" etc
 					if (!this.textContent || this.textContent.length > 60) return;
 					var binUrl = (this.textContent || '')
-						.match(/(https?:\/\/[a-z\.]*qanonbin\.com\/(paste|clone)\/[a-zA-Z0-9]{9})\b/);
+						.match(/(https?:\/\/[a-z0-9\.]*qanonbin\.com\/(paste|clone)\/[a-zA-Z0-9]{9})\b/);
 					if (!binUrl) return;
 					binUrl = binUrl[1];
 					var binId = binUrl.substring(binUrl.length - 9);
