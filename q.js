@@ -587,6 +587,17 @@ span.qjs-pastebin a {
 .qjs-postnum-part:last-child {
   padding-right: 0;
 }
+#qjs-boards-parent {
+  position: relative;
+}
+#qjs-boards {
+  position: absolute;
+  top: 1em;
+  padding: 0.3em;
+}
+#qjs-boards > a {
+  display: block;
+}
 
 /* Extra styles */
 ${getSetting('extraStyles')}
@@ -1320,6 +1331,23 @@ ${getSetting('extraStyles')}
 		postratenav();
 		sidenav();
 		runq();
+
+		// Collapse the boards list in the top bar
+		(function() {
+			var $boards = $('.boardlist:first > .sub[data-description="1"]');
+			$boards.attr('id', 'qjs-boards-parent');
+			var links = $boards.html().replace(/^\[\s*|\s*\]$/g, '').split(' / ');
+			$boards.html('[ <a id="qjs-expand-boards" href="#">Boards</a> ]');
+			$boards.append(
+				$('<div id="qjs-boards" class="boardlist">')
+					.html(links.join('\n'))
+					.hide()
+			);
+			$('#qjs-expand-boards').on('click', function() {
+				$('#qjs-boards').toggle();
+				return false;
+			});
+		})();
 
 		// Scroll back to target post after qjs controls added
 		setTimeout(function() {

@@ -21,6 +21,7 @@ This script keeps all of those features and adds some more:
 - Add spaces between 3-digit groupings in post numbers to make them easier to read
 - Fix broken images in the "flags" section of a post when you make a new post
 - Show author info for qanonbin pastes in the thread
+- Collapse the boards list in the top bar
 - Better default settings for other boards like /qrb/
 - Better settings system (see "Settings" below)
 
