@@ -93,6 +93,7 @@ span.qjs-pastebin a {
 	var postCount = 0;
 	var navScaleFactor = 3;
 	var isCyclical = $('.post.op .fa.fa-refresh').length > 0;
+	var isArtificialClick = false;
 
 	function getSetting(name) {
 		var s = window.qjsSettings;
@@ -291,7 +292,6 @@ span.qjs-pastebin a {
 		}
 
 		var reenableAutoUpdateLimit = 600;
-		var isArtificialClick = false;
 
 		function enableAutoUpdateCheck() {
 			autoUpdateInterval = setInterval(function() {
@@ -593,6 +593,8 @@ span.qjs-pastebin a {
 #qjs-boards {
   position: absolute;
   top: 1em;
+  left: 0;
+  right: auto;
   padding: 0.3em;
 }
 #qjs-boards > a {
@@ -1343,8 +1345,21 @@ ${getSetting('extraStyles')}
 					.html(links.join('\n'))
 					.hide()
 			);
+			var $qjsBoards = $('#qjs-boards');
 			$('#qjs-expand-boards').on('click', function() {
-				$('#qjs-boards').toggle();
+				if ($qjsBoards.css('display') === 'none') {
+					$qjsBoards.show();
+					function hideQjsBoardsAgain() {
+						if (isArtificialClick) {
+							return;
+						}
+						$qjsBoards.hide();
+						$(document).off('click', hideQjsBoardsAgain);
+					}
+					$(document).on('click', hideQjsBoardsAgain);
+				} else {
+					$qjsBoards.hide();
+				}
 				return false;
 			});
 		})();
