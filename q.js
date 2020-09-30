@@ -76,6 +76,11 @@ span.qjs-pastebin a {
 		},
 	};
 
+	// If not on an individual thread page (ex. index or catalog) then just exit
+	if (!/^\/[^\/]+\/res\/\d+\.html$/.test(window.location.pathname)) {
+		return;
+	}
+
 	var qjs_main = window.qjs_main = window.qjs_main || {};
 	qjs_main.defaultSettings = defaultSettings;
 
