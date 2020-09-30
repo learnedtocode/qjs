@@ -1,4 +1,4 @@
-// BEGIN Q.JS CODE
+// BEGIN Q.JS CODE -- Version 2020-09-29
 // MODIFICATIONS BELOW THIS LINE NOT RECOMMENDED!
 // SEE https://github.com/learnedtocode/qjs
 // for instructions on modifying this script's behavior without modifying its code!
@@ -1410,3 +1410,4 @@ ${getSetting('extraStyles')}
 	// Wait for 8kun code that adds (you)s to run
 	setTimeout(qjs_main.Q, 30);
 });
+// END Q.JS CODE
