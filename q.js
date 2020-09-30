@@ -19,6 +19,10 @@ jQuery(function($) {
 		updateDelay: 30, // ms
 		sidenavWidth: 30, // px
 
+		// Improve reply citing when you select text and click to quote it.
+		// NOTE: This setting also DISABLES the posting box at the top of each thread!
+		improveReplyCiting: false,
+
 		floodEnabled: false,
 		floodThreshold: 15, // min # posts before beginning fade
 		floodVanish: 25, // max # posts before completed fade/hide
@@ -431,7 +435,7 @@ span.qjs-pastebin a {
 		setTimeout(fadeMyPosts, 600);
 	}
 
-	if (/\/res\/\d+.html/.test(window.location.href)) {
+	if (getSetting('improveReplyCiting')) {
 		// Fix reply citing: don't reset textarea scroll position or cursor position
 		// To make this simpler, and also fix the quick reply box not appearing:
 		// use the quick reply box only
