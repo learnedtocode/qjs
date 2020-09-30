@@ -53,6 +53,7 @@ In order to change the settings you put some special code BEFORE the script code
 ```js
 window.qjsSettings = {
   youcolor: '#ffffbb',
+  improveReplyCiting: true,
 };
 
 // BEGIN Q.JS CODE
@@ -80,3 +81,17 @@ window.qjsSettings = {
 It's better to change the settings this way, WITHOUT modifying this script's code, because that way it's easier for you to update to new versions of the script later!
 
 If there's a feature that you'd like to disable let us know in the [issues](https://github.com/learnedtocode/qjs/issues) or on the [8kun thread for this project](https://8kun.top/comms/res/21036.html) and we'll add a setting to let you disable it.
+
+### Changelog
+
+Check the first line of the script's code to see which version you have. If there isn't a version marker there, then you have the initial public version from July 31, 2020.
+
+#### Version 2020-09-29
+
+- Fix creating new threads from the catalog. The script is now completely disabled on the catalog, index, and any other pages that are not an individual thread.
+- Disable "reply citing" improvements by default, since this feature removes the reply box at the top of each thread. Set the `improveReplyCiting` setting to `true` to re-enable this.
+
+#### Version 2020-07-31
+
+- Initial public version.
+- Version number is NOT present in the first line of the script's code!
